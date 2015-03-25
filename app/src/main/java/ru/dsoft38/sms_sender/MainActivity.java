@@ -62,12 +62,15 @@ public class MainActivity extends ActionBarActivity {
     public void onClickSend(View v) {
         String[] numberList = null;
         numberList = new String[3];
-        numberList[0] = "Cheese";
-        numberList[1] = "Pepperoni";
-        numberList[2] = "Black Olives";
+        numberList[0] = "89148968608";
+        numberList[1] = "89148968608";
+        numberList[2] = "89148968608";
 
+        Intent sms = new Intent(this, SendSMSService.class);
+        sms.putExtra("numberList", numberList);
+        sms.putExtra("smsText", "There are multiple ways:");
 
-        startService(new Intent(this, SendSMSService.class).putExtra("numberList", numberList));
+        startService(sms);
     }
 
     public void onClickStop(View v) {

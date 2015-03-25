@@ -1,8 +1,14 @@
 package ru.dsoft38.sms_sender;
 
+import android.app.Activity;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.IBinder;
+import android.telephony.SmsManager;
 import android.util.Log;
 
 /**
@@ -10,18 +16,50 @@ import android.util.Log;
  */
 public class SendSMSService  extends Service {
 
+    // максимальное количество отправляемых сообщений для этого сервиса
     final String LOG_TAG = "Send SMS Service";
+    private int maxSMSIndex = 100;
+
+    // Флаги для отправки и доставки SMS
+    String SENT_SMS_FLAG = "SENT_SMS";
+    String DELIVER_SMS_FLAG = "DELIVER_SMS";
+
+    PendingIntent sentPIn = null;
+    PendingIntent deliverPIn = null;
+
+    // Список телефонных номеров и текст сообщения
+    String [] numList = null;
+    String smsText = null;
+
+    private int currentSMSNumberIndex = 0;
+
 
     @Override
     public void onCreate() {
         super.onCreate();
         Log.d(LOG_TAG, "onCreate");
+
+        Intent sentIn = new Intent(SENT_SMS_FLAG);
+        sentPIn = PendingIntent.getBroadcast(this, 0, sentIn, 0);
+
+        Intent deliverIn = new Intent(DELIVER_SMS_FLAG);
+        deliverPIn = PendingIntent.getBroadcast(this, 0, deliverIn, 0);
+
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(LOG_TAG, "onStartCommand");
-        someTask(intent);
+
+        registerReceiver(sentReceiver, new IntentFilter(SENT_SMS_FLAG));
+        registerReceiver(deliverReceiver, new IntentFilter(DELIVER_SMS_FLAG));
+
+        numList     = (String[])intent.getExtras().get("numberList");
+        smsText     = (String)intent.getExtras().get("smsText");
+        maxSMSIndex = numList.length;
+
+        sendSMS();
+
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -29,6 +67,9 @@ public class SendSMSService  extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.d(LOG_TAG, "onDestroy");
+
+        unregisterReceiver(sentReceiver);
+        unregisterReceiver(deliverReceiver);
     }
 
     @Override
@@ -37,15 +78,93 @@ public class SendSMSService  extends Service {
         return null;
     }
 
-    void someTask(Intent intent) {
-        String [] numList=(String[])intent.getExtras().get("numberList");
+    void sendSMS() {
+        // Завершаем сервис если отправили максимальное количество СМС (-1 потому что индекс в массиве начинается с 0)
+        //if (currentSMSNumberIndex >= maxSMSIndex - 1)
+        //        stopSelf();
 
-        if (numList == null)
+        if ( numList == null | smsText == null | currentSMSNumberIndex >= maxSMSIndex )
             return;
 
-        for(int i = 0; i < numList.length; i++)
-        {
-            Log.d(LOG_TAG, numList[i]);
-        }
+        SmsManager smsManager = SmsManager.getDefault();
+        // отправляем сообщение
+        Log.d(LOG_TAG, "Отправляется сообщение №" + String.valueOf(currentSMSNumberIndex + 1) + " из " + String.valueOf(maxSMSIndex));
+
+        smsManager.sendTextMessage(numList[currentSMSNumberIndex], null, smsText, sentPIn, deliverPIn);
+        //smsManager.sendTextMessage("5556", null, smsText, null, null);
     }
+
+    BroadcastReceiver sentReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent in) {
+            //currentSMSNumberIndex++;
+
+            switch (getResultCode()) {
+                case Activity.RESULT_OK:
+                    // sent SMS message successfully;
+                    //Toast toast = Toast.makeText(getApplicationContext(),"Сообщение отправлено!", Toast.LENGTH_SHORT);
+                    //toast.show();
+                    Log.d(LOG_TAG, "Сообщение отправлено!");
+                    //currentSMSNumberIndex++;
+                    //sendSMS();
+                    break;
+                case SmsManager.RESULT_ERROR_RADIO_OFF :
+                    Log.d(LOG_TAG, "Телефонный модуль выключен!");
+                    //sendSMS();
+                    break;
+                case SmsManager.RESULT_ERROR_NULL_PDU :
+                    Log.d(LOG_TAG, "Возникла проблема, связанная с форматом PDU (protocol description unit)!");
+                    //sendSMS();
+                    break;
+                case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
+                    Log.d(LOG_TAG, "При отправке возникли неизвестные проблемы!");
+                    //sendSMS();
+                    break;
+                default:
+                    // sent SMS message failed
+                    Log.d(LOG_TAG, "Сообщение не отправлено!");
+                    break;
+            }
+        }
+    };
+
+    BroadcastReceiver deliverReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent in) {
+            // SMS delivered actions
+
+            currentSMSNumberIndex++;
+
+            switch (getResultCode()) {
+                case Activity.RESULT_OK:
+                    // sent SMS message successfully;
+                    //Toast toast = Toast.makeText(getApplicationContext(), "Сообщение доставлено!", Toast.LENGTH_SHORT);
+                    //toast.show();
+                    Log.d(LOG_TAG, "Сообщение доставлено!");
+                    sendSMS();
+                    break;
+                case SmsManager.RESULT_ERROR_RADIO_OFF :
+                    Log.d(LOG_TAG, "!Телефонный модуль выключен!");
+                    sendSMS();
+                    break;
+                case SmsManager.RESULT_ERROR_NULL_PDU :
+                    Log.d(LOG_TAG, "!Возникла проблема, связанная с форматом PDU (protocol description unit)!");
+                    sendSMS();
+                    break;
+                case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
+                    Log.d(LOG_TAG, "!При отправке возникли неизвестные проблемы!");
+                    sendSMS();
+                    break;
+                default:
+                    // sent SMS message failed
+                    Log.d(LOG_TAG, "Сообщение не доставлено!");
+                    sendSMS();
+                    break;
+            }
+
+            // Завершаем сервис если отправили максимальное количество СМС )
+            if (currentSMSNumberIndex >= maxSMSIndex)
+                stopSelf();
+        }
+    };
 }
