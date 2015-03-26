@@ -11,6 +11,8 @@ import android.os.IBinder;
 import android.telephony.SmsManager;
 import android.util.Log;
 
+import java.util.List;
+
 /**
  * Created by user on 25.03.2015.
  */
@@ -28,7 +30,7 @@ public class SendSMSService  extends Service {
     PendingIntent deliverPIn = null;
 
     // Список телефонных номеров и текст сообщения
-    String [] numList = null;
+    String[] numList = null;
     String smsText = null;
 
     private int currentSMSNumberIndex = 0;
@@ -51,13 +53,16 @@ public class SendSMSService  extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(LOG_TAG, "onStartCommand");
 
+        // Регистрация на оповещения об отправке и доставке СМС
         registerReceiver(sentReceiver, new IntentFilter(SENT_SMS_FLAG));
         registerReceiver(deliverReceiver, new IntentFilter(DELIVER_SMS_FLAG));
 
+        // Получаем переданные номера телефонов и текст СМС
         numList     = (String[])intent.getExtras().get("numberList");
         smsText     = (String)intent.getExtras().get("smsText");
         maxSMSIndex = numList.length;
 
+        // Отправляем СМС
         sendSMS();
 
         return super.onStartCommand(intent, flags, startId);
@@ -67,7 +72,7 @@ public class SendSMSService  extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.d(LOG_TAG, "onDestroy");
-
+        // отмена регистрации на оповещение отправки и доставка СМС
         unregisterReceiver(sentReceiver);
         unregisterReceiver(deliverReceiver);
     }
@@ -90,7 +95,15 @@ public class SendSMSService  extends Service {
         // отправляем сообщение
         Log.d(LOG_TAG, "Отправляется сообщение №" + String.valueOf(currentSMSNumberIndex + 1) + " из " + String.valueOf(maxSMSIndex));
 
-        smsManager.sendTextMessage(numList[currentSMSNumberIndex], null, smsText, sentPIn, deliverPIn);
+        // Удаляем не нужные символы
+        String num = numList[currentSMSNumberIndex].replace("-", "").replace(";", "").replace(" ", "").trim();
+
+        // Проверяем длину номера 11 символов или 12, если с +
+        if (num.length() == 11 || (num.substring(0, 1).equals("+") && num.length() == 12)) {
+            smsManager.sendTextMessage(num, null, smsText, sentPIn, deliverPIn);
+        }
+
+
         //smsManager.sendTextMessage("5556", null, smsText, null, null);
     }
 
@@ -133,8 +146,10 @@ public class SendSMSService  extends Service {
         public void onReceive(Context c, Intent in) {
             // SMS delivered actions
 
+            // Увеличиваем счетчик для номеров телефонов в списке
             currentSMSNumberIndex++;
 
+            // В зависимости от ответа о доставке СМС выводим лог. Запускаем отправку следующего СМС (проверить как будет если номер отключен)
             switch (getResultCode()) {
                 case Activity.RESULT_OK:
                     // sent SMS message successfully;

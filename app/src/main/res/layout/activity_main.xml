@@ -40,7 +40,8 @@
         android:layout_marginRight="5dp"
         android:layout_alignTop="@+id/imgButtonBrowse"
         android:layout_toLeftOf="@+id/imgButtonBrowse"
-        android:layout_toStartOf="@+id/imgButtonBrowse" />
+        android:layout_toStartOf="@+id/imgButtonBrowse"
+        android:onClick="onClickBrowse" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -148,6 +149,7 @@
         android:layout_alignTop="@+id/editMessageText"
         android:layout_alignRight="@+id/imgButtonBrowse"
         android:layout_alignEnd="@+id/imgButtonBrowse"
-        android:background="@drawable/clean_down" />
+        android:background="@drawable/clean_down"
+        android:onClick="onClickClean" />
 
 </RelativeLayout>
