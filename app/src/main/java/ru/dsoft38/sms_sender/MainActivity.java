@@ -1,6 +1,8 @@
 package ru.dsoft38.sms_sender;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -19,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Vector;
 
@@ -47,6 +50,15 @@ public class MainActivity extends ActionBarActivity {
     // Текущее количество СМС
     private int smsCount = 1;
 
+    private SharedPreferences sp;
+
+    //
+    private int iMount = 1;
+    private int iDay = 1;
+    private int iSMSCount = 0;
+    private Calendar calendar;
+    private int MaxSMSCountSend = 100;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -66,6 +78,21 @@ public class MainActivity extends ActionBarActivity {
         tvMessage                   = (TextView) findViewById(R.id.tvMessage);
 
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
+
+        // Получаем текущую дату
+        calendar = Calendar.getInstance(java.util.TimeZone.getDefault(), java.util.Locale.getDefault());
+        calendar.setTime(new java.util.Date());
+
+        sp = PreferenceManager.getDefaultSharedPreferences(this);
+
+        iDay = sp.getInt("DAY_OF_YEAR", calendar.get(java.util.Calendar.DAY_OF_YEAR));
+
+        // Если текущий день года не равен записаному. сбрасываем счетчик СМС
+        if(iDay != calendar.get(java.util.Calendar.DAY_OF_YEAR)){
+            resetSMSCount();
+        }
+
+        iSMSCount = sp.getInt("iSMSCount", 0);
 
         //Обработка ввода символов в текстовое поле для текста СМС
         editMessageTest.addTextChangedListener(new TextWatcher()  {
@@ -139,14 +166,29 @@ public class MainActivity extends ActionBarActivity {
                 //    numberList[i] =
                 //}
 
-                String[] numberList = strNumbers.toArray(new String[strNumbers.size()]);
+                //AcceptSendCount();
+
+                String[] numberList = new String[AcceptSendCount(strNumbers.size())];
+
+                /**
+                if (strNumbers.size() <= 100){
+                    numberList = strNumbers.toArray(new String[strNumbers.size()]);
+                } else {
+                    // Устанавливаем размер списка равный оставшимся на сегодня кол-ом не отправленных СМС
+                    numberList = strNumbers.toArray(new String[100]);
+                }
+                **/
+
+                // Если список номеров телефонов пустой, то выходим.
+                if (numberList.length == 0)
+                    return;
 
                 // Передаем данные в сервис отправки СМС
                 Intent sms = new Intent(this, SendSMSService.class);
                 sms.putExtra("numberList", numberList);
                 sms.putExtra("smsText", editMessageTest.getText().toString());
 
-                startService(sms);
+                //startService(sms);
 
                 // Делаем кнопку не активной
                 btnBrowse.setEnabled(false);
@@ -291,5 +333,51 @@ public class MainActivity extends ActionBarActivity {
 
         tvPhoneNumberCount.setText("(" + String.valueOf(strNumbers.size()) + ")");
         tvPhoneNumberListFilePatch.setText(path);
+    }
+
+    // Проверяем разрешена ли отправка и сколько еще осталось СМС из лиминта бесплатной версии
+    private int AcceptSendCount( int count ){
+        //java.util.Calendar calendar = java.util.Calendar.getInstance(java.util.TimeZone.getDefault(), java.util.Locale.getDefault());
+        calendar.setTime(new java.util.Date());
+        //int currentYear = calendar.get(java.util.Calendar.YEAR);
+        int currentDay = calendar.get(java.util.Calendar.DAY_OF_YEAR);
+
+        if(currentDay == iDay && iSMSCount < MaxSMSCountSend){
+            SharedPreferences.Editor editor = sp.edit();
+
+            int freeSMS = MaxSMSCountSend - iSMSCount;
+
+            if ( (freeSMS < MaxSMSCountSend) && (count + iSMSCount > MaxSMSCountSend) ){
+                Toast.makeText(getApplicationContext(), "Будет отправленно " + String.valueOf( freeSMS ) + "!\n Сегодня Вы уже отправили " + String.valueOf( iSMSCount ) + " СМС. \n Приобретите полную версию.", Toast.LENGTH_SHORT).show();
+            }
+
+            editor.putInt("DAY_OF_YEAR", currentDay);
+            //sp.edit().apply();
+            //editor.commit();
+            iSMSCount = iSMSCount + freeSMS;
+            editor.putInt("iSMSCount", iSMSCount);
+            //sp.edit().apply();
+            editor.commit();
+
+            iSMSCount = sp.getInt("iSMSCount", 0);
+
+            //txtCount.setText("Отправлено " + iSMSCount + " из 15.");
+
+
+
+            return freeSMS;
+        } else {
+            Toast.makeText(getApplicationContext(), "Вы израсходовали лимит (" + String.valueOf( MaxSMSCountSend ) + " СМС) на сегодня!\n Приобретите полную версию.", Toast.LENGTH_SHORT).show();
+            return 0;
+        }
+    }
+
+    // Сбрасываем счетчик СМС
+    private void resetSMSCount(){
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putInt("iSMSCount", 0);
+        //editor.putInt("iMount", calendar.get(java.util.Calendar.MONTH));
+        editor.putInt("DAY_OF_YEAR", calendar.get(Calendar.DAY_OF_YEAR));
+        editor.commit();
     }
 }
