@@ -1,8 +1,9 @@
 package ru.dsoft38.sms_sender;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
+import android.content.IntentFilter;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -21,7 +22,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Calendar;
+
 import java.util.List;
 import java.util.Vector;
 
@@ -50,14 +51,9 @@ public class MainActivity extends ActionBarActivity {
     // Текущее количество СМС
     private int smsCount = 1;
 
-    private SharedPreferences sp;
+    protected SentMessages sentMessages;
 
-    //
-    private int iMount = 1;
-    private int iDay = 1;
-    private int iSMSCount = 0;
-    private Calendar calendar;
-    private int MaxSMSCountSend = 100;
+    BroadcastReceiver service;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,20 +75,24 @@ public class MainActivity extends ActionBarActivity {
 
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
-        // Получаем текущую дату
-        calendar = Calendar.getInstance(java.util.TimeZone.getDefault(), java.util.Locale.getDefault());
-        calendar.setTime(new java.util.Date());
+        sentMessages = new SentMessages(this);
 
-        sp = PreferenceManager.getDefaultSharedPreferences(this);
-
-        iDay = sp.getInt("DAY_OF_YEAR", calendar.get(java.util.Calendar.DAY_OF_YEAR));
-
-        // Если текущий день года не равен записаному. сбрасываем счетчик СМС
-        if(iDay != calendar.get(java.util.Calendar.DAY_OF_YEAR)){
-            resetSMSCount();
-        }
-
-        iSMSCount = sp.getInt("iSMSCount", 0);
+        //Регистрация приемника
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("SMSSender");
+        service = new BroadcastReceiver()
+        {
+            @Override
+            public void onReceive(Context context, Intent intent)
+            {
+                if(intent.getAction().equals("SMSSender"))
+                {
+                    Log.i("SMSSender",intent.getStringExtra("smscount"));
+                    sentMessages.addSentSMSCount(Integer.parseInt(intent.getStringExtra("smscount")));
+                }
+            }
+        };
+        registerReceiver(service, filter);
 
         //Обработка ввода символов в текстовое поле для текста СМС
         editMessageTest.addTextChangedListener(new TextWatcher()  {
@@ -168,7 +168,23 @@ public class MainActivity extends ActionBarActivity {
 
                 //AcceptSendCount();
 
-                String[] numberList = new String[AcceptSendCount(strNumbers.size())];
+                int freeSMSCount = sentMessages.getFreeSMSCount();
+                String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);
+                String[] numberList = null;
+
+                //System.arraycopy(numberListTemp, 0, numberList, 0, sourceArray.length);
+
+                // В зависимости от оставшихся СМС и количества необходимого отправить, устанавливаем размер массива
+                if ( strNumbers.size() <= freeSMSCount ){
+                    //numberList = strNumbers.toArray(new String[strNumbers.size()]);
+                    numberList = new String[strNumbers.size()];
+                    System.arraycopy(numberListTemp, 0, numberList, 0, strNumbers.size());
+                } else {
+                    //numberList = strNumbers.toArray(new String[freeSMSCount]);
+                    numberList = new String[freeSMSCount];
+                    System.arraycopy(numberListTemp, 0, numberList, 0, freeSMSCount);
+                }
+
 
                 /**
                 if (strNumbers.size() <= 100){
@@ -177,18 +193,36 @@ public class MainActivity extends ActionBarActivity {
                     // Устанавливаем размер списка равный оставшимся на сегодня кол-ом не отправленных СМС
                     numberList = strNumbers.toArray(new String[100]);
                 }
+
+                 Toast.makeText(getApplicationContext(), "Будет отправленно " + String.valueOf( freeSMS ) + "!\n Сегодня Вы уже отправили " + String.valueOf( iSMSCount ) + " СМС. \n Приобретите полную версию.", Toast.LENGTH_SHORT).show();
+
+                 Toast.makeText(getApplicationContext(), "Вы израсходовали лимит (" + String.valueOf( MaxSMSCountSend ) + " СМС) на сегодня!\n Приобретите полную версию.", Toast.LENGTH_SHORT).show();
                 **/
 
                 // Если список номеров телефонов пустой, то выходим.
-                if (numberList.length == 0)
+                if (numberList.length == 0) {
+                    Toast.makeText(getApplicationContext(),
+                            "Вы израсходовали лимит (" + String.valueOf( sentMessages.MaxSMSCountSend ) +
+                                    " СМС) на сегодня!\n Приобретите полную версию.",
+                            Toast.LENGTH_SHORT).show();
                     return;
+                } else if ( numberList.length == 100 ) {
+
+                } else {
+                    Toast.makeText(getApplicationContext(),
+                            "Будет отправленно " + String.valueOf( sentMessages.MaxSMSCountSend - numberList.length ) +
+                                    "!\n Сегодня Вы уже отправили " + String.valueOf( numberList.length ) +
+                                    " СМС. \n Приобретите полную версию.",
+                            Toast.LENGTH_SHORT).show();
+                }
 
                 // Передаем данные в сервис отправки СМС
                 Intent sms = new Intent(this, SendSMSService.class);
                 sms.putExtra("numberList", numberList);
                 sms.putExtra("smsText", editMessageTest.getText().toString());
 
-                //startService(sms);
+                // Запуск сервиса отправки СМС
+                startService(sms);
 
                 // Делаем кнопку не активной
                 btnBrowse.setEnabled(false);
@@ -322,7 +356,6 @@ public class MainActivity extends ActionBarActivity {
             if(hexCode > 1040 && hexCode < 1103){
                 return true;
             }
-
         }
         return false;
     }
@@ -335,49 +368,11 @@ public class MainActivity extends ActionBarActivity {
         tvPhoneNumberListFilePatch.setText(path);
     }
 
-    // Проверяем разрешена ли отправка и сколько еще осталось СМС из лиминта бесплатной версии
-    private int AcceptSendCount( int count ){
-        //java.util.Calendar calendar = java.util.Calendar.getInstance(java.util.TimeZone.getDefault(), java.util.Locale.getDefault());
-        calendar.setTime(new java.util.Date());
-        //int currentYear = calendar.get(java.util.Calendar.YEAR);
-        int currentDay = calendar.get(java.util.Calendar.DAY_OF_YEAR);
-
-        if(currentDay == iDay && iSMSCount < MaxSMSCountSend){
-            SharedPreferences.Editor editor = sp.edit();
-
-            int freeSMS = MaxSMSCountSend - iSMSCount;
-
-            if ( (freeSMS < MaxSMSCountSend) && (count + iSMSCount > MaxSMSCountSend) ){
-                Toast.makeText(getApplicationContext(), "Будет отправленно " + String.valueOf( freeSMS ) + "!\n Сегодня Вы уже отправили " + String.valueOf( iSMSCount ) + " СМС. \n Приобретите полную версию.", Toast.LENGTH_SHORT).show();
-            }
-
-            editor.putInt("DAY_OF_YEAR", currentDay);
-            //sp.edit().apply();
-            //editor.commit();
-            iSMSCount = iSMSCount + freeSMS;
-            editor.putInt("iSMSCount", iSMSCount);
-            //sp.edit().apply();
-            editor.commit();
-
-            iSMSCount = sp.getInt("iSMSCount", 0);
-
-            //txtCount.setText("Отправлено " + iSMSCount + " из 15.");
-
-
-
-            return freeSMS;
-        } else {
-            Toast.makeText(getApplicationContext(), "Вы израсходовали лимит (" + String.valueOf( MaxSMSCountSend ) + " СМС) на сегодня!\n Приобретите полную версию.", Toast.LENGTH_SHORT).show();
-            return 0;
-        }
-    }
-
-    // Сбрасываем счетчик СМС
-    private void resetSMSCount(){
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putInt("iSMSCount", 0);
-        //editor.putInt("iMount", calendar.get(java.util.Calendar.MONTH));
-        editor.putInt("DAY_OF_YEAR", calendar.get(Calendar.DAY_OF_YEAR));
-        editor.commit();
+    @Override
+    protected void onDestroy()
+    {
+        super.onDestroy();
+        if(service!= null){unregisterReceiver(service);}
+        //stopService(new Intent(this,MainService.class));
     }
 }

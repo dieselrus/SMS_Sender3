@@ -35,6 +35,8 @@ public class SendSMSService  extends Service {
 
     private int currentSMSNumberIndex = 0;
 
+    // Для передачи данных обратно приложению
+    Intent intentApp;
 
     @Override
     public void onCreate() {
@@ -46,6 +48,9 @@ public class SendSMSService  extends Service {
 
         Intent deliverIn = new Intent(DELIVER_SMS_FLAG);
         deliverPIn = PendingIntent.getBroadcast(this, 0, deliverIn, 0);
+
+        // Для передачи данных обратно приложению
+        intentApp = new Intent("SMSSender");
 
     }
 
@@ -88,7 +93,7 @@ public class SendSMSService  extends Service {
         //if (currentSMSNumberIndex >= maxSMSIndex - 1)
         //        stopSelf();
 
-        if ( numList == null | smsText == null | currentSMSNumberIndex >= maxSMSIndex )
+        if ( numList[currentSMSNumberIndex] == null | smsText == null | currentSMSNumberIndex >= maxSMSIndex )
             return;
 
         SmsManager smsManager = SmsManager.getDefault();
@@ -101,10 +106,12 @@ public class SendSMSService  extends Service {
         // Проверяем длину номера 11 символов или 12, если с +
         if (num.length() == 11 || (num.substring(0, 1).equals("+") && num.length() == 12)) {
             smsManager.sendTextMessage(num, null, smsText, sentPIn, deliverPIn);
+            //smsManager.sendTextMessage("5556", null, smsText, null, null);
         }
 
+        // Оповещаем приложение об отправке СМС
+        sendDataToApp("smscount", String.valueOf(currentSMSNumberIndex + 1));
 
-        //smsManager.sendTextMessage("5556", null, smsText, null, null);
     }
 
     BroadcastReceiver sentReceiver = new BroadcastReceiver() {
@@ -178,8 +185,17 @@ public class SendSMSService  extends Service {
             }
 
             // Завершаем сервис если отправили максимальное количество СМС )
-            if (currentSMSNumberIndex >= maxSMSIndex)
+            if (currentSMSNumberIndex >= maxSMSIndex) {
+                sendDataToApp("endtask", "end");
                 stopSelf();
+            }
         }
     };
+
+    // Отправка широковещательного сообщения
+    private void sendDataToApp(String name,String value){
+        intentApp.removeExtra(name);
+        intentApp.putExtra(name, value);
+        sendBroadcast(intentApp);
+    }
 }
