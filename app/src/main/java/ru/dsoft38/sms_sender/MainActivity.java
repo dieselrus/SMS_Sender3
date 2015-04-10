@@ -87,8 +87,10 @@ public class MainActivity extends ActionBarActivity {
             {
                 if(intent.getAction().equals("SMSSender"))
                 {
-                    Log.i("SMSSender",intent.getStringExtra("smscount"));
-                    sentMessages.addSentSMSCount(Integer.parseInt(intent.getStringExtra("smscount")));
+                    int smsCount = Integer.parseInt(intent.getStringExtra("smscount"));
+                    Log.i("SMSSender", String.valueOf(smsCount));
+                    progressBar.setProgress(smsCount);
+                    sentMessages.addSentSMSCount(smsCount);
                 }
             }
         };
@@ -167,9 +169,9 @@ public class MainActivity extends ActionBarActivity {
                 //}
 
                 //AcceptSendCount();
-
-                int freeSMSCount = sentMessages.getFreeSMSCount();
-                String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);
+//=========================================================================================================================================================================================
+                int freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
+                String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);    // Берем часть массива с номерама
                 String[] numberList = null;
 
                 //System.arraycopy(numberListTemp, 0, numberList, 0, sourceArray.length);
@@ -185,6 +187,8 @@ public class MainActivity extends ActionBarActivity {
                     System.arraycopy(numberListTemp, 0, numberList, 0, freeSMSCount);
                 }
 
+                // Максимальное значение прогрессбара
+                progressBar.setMax(numberList.length);
 
                 /**
                 if (strNumbers.size() <= 100){
@@ -210,8 +214,8 @@ public class MainActivity extends ActionBarActivity {
 
                 } else {
                     Toast.makeText(getApplicationContext(),
-                            "Будет отправленно " + String.valueOf( sentMessages.MaxSMSCountSend - numberList.length ) +
-                                    "!\n Сегодня Вы уже отправили " + String.valueOf( numberList.length ) +
+                            "Будет отправленно " + String.valueOf( sentMessages.MaxSMSCountSend - sentMessages.getSentSMSCount() ) +
+                                    "!\n Сегодня Вы уже отправили " + String.valueOf( sentMessages.getSentSMSCount() ) +
                                     " СМС. \n Приобретите полную версию.",
                             Toast.LENGTH_SHORT).show();
                 }

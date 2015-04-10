@@ -105,7 +105,8 @@ public class SendSMSService  extends Service {
 
         // Проверяем длину номера 11 символов или 12, если с +
         if (num.length() == 11 || (num.substring(0, 1).equals("+") && num.length() == 12)) {
-            smsManager.sendTextMessage(num, null, smsText, sentPIn, deliverPIn);
+            Log.d(LOG_TAG, "Отправляется");
+            //smsManager.sendTextMessage(num, null, smsText, sentPIn, deliverPIn);
             //smsManager.sendTextMessage("5556", null, smsText, null, null);
         }
 
