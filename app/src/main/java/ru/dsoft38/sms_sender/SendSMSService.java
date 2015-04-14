@@ -51,7 +51,6 @@ public class SendSMSService  extends Service {
 
         // Для передачи данных обратно приложению
         intentApp = new Intent("SMSSender");
-
     }
 
     @Override
@@ -61,6 +60,8 @@ public class SendSMSService  extends Service {
         // Регистрация на оповещения об отправке и доставке СМС
         registerReceiver(sentReceiver, new IntentFilter(SENT_SMS_FLAG));
         registerReceiver(deliverReceiver, new IntentFilter(DELIVER_SMS_FLAG));
+
+        sendDataToApp("SMSSenderServiceStatus", "servicestatus", "start");
 
         // Получаем переданные номера телефонов и текст СМС
         numList     = (String[])intent.getExtras().get("numberList");
@@ -77,6 +78,8 @@ public class SendSMSService  extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.d(LOG_TAG, "onDestroy");
+        // Уведомляем главное окно о том что сервиз остановлен (закрылся)
+        sendDataToApp("SMSSenderServiceStatus", "servicestatus", "stop");
         // отмена регистрации на оповещение отправки и доставка СМС
         unregisterReceiver(sentReceiver);
         unregisterReceiver(deliverReceiver);
@@ -93,7 +96,10 @@ public class SendSMSService  extends Service {
         //if (currentSMSNumberIndex >= maxSMSIndex - 1)
         //        stopSelf();
 
-        if ( numList[currentSMSNumberIndex] == null | smsText == null | currentSMSNumberIndex >= maxSMSIndex )
+        if ( currentSMSNumberIndex >= maxSMSIndex )
+            return;
+
+        if ( numList[currentSMSNumberIndex] == null | smsText == null )
             return;
 
         SmsManager smsManager = SmsManager.getDefault();
@@ -106,12 +112,12 @@ public class SendSMSService  extends Service {
         // Проверяем длину номера 11 символов или 12, если с +
         if (num.length() == 11 || (num.substring(0, 1).equals("+") && num.length() == 12)) {
             Log.d(LOG_TAG, "Отправляется");
-            //smsManager.sendTextMessage(num, null, smsText, sentPIn, deliverPIn);
+            smsManager.sendTextMessage(num, null, smsText, sentPIn, deliverPIn);
             //smsManager.sendTextMessage("5556", null, smsText, null, null);
         }
 
         // Оповещаем приложение об отправке СМС
-        sendDataToApp("smscount", String.valueOf(currentSMSNumberIndex + 1));
+        sendDataToApp("SMSSenderSMSCount", "smscount", String.valueOf(currentSMSNumberIndex + 1));
 
     }
 
@@ -187,14 +193,15 @@ public class SendSMSService  extends Service {
 
             // Завершаем сервис если отправили максимальное количество СМС )
             if (currentSMSNumberIndex >= maxSMSIndex) {
-                sendDataToApp("endtask", "end");
+                sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
                 stopSelf();
             }
         }
     };
 
     // Отправка широковещательного сообщения
-    private void sendDataToApp(String name,String value){
+    private void sendDataToApp(String action, String name,String value){
+        intentApp.setAction(action);
         intentApp.removeExtra(name);
         intentApp.putExtra(name, value);
         sendBroadcast(intentApp);

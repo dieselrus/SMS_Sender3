@@ -79,18 +79,37 @@ public class MainActivity extends ActionBarActivity {
 
         //Регистрация приемника
         IntentFilter filter = new IntentFilter();
-        filter.addAction("SMSSender");
+        filter.addAction("SMSSenderSMSCount");
+        filter.addAction("SMSSenderServiceStatus");
+
         service = new BroadcastReceiver()
         {
             @Override
             public void onReceive(Context context, Intent intent)
             {
-                if(intent.getAction().equals("SMSSender"))
+                if(intent.getAction().equals("SMSSenderSMSCount"))
                 {
                     int smsCount = Integer.parseInt(intent.getStringExtra("smscount"));
                     Log.i("SMSSender", String.valueOf(smsCount));
                     progressBar.setProgress(smsCount);
                     sentMessages.addSentSMSCount(smsCount);
+
+                } else if (intent.getAction().equals("SMSSenderServiceStatus")){
+
+                    if(intent.getAction().equals("stop")) {
+                        btnStart.setEnabled(true);
+                        btnPause.setEnabled(false);
+                        btnStop.setEnabled(false);
+                        btnBrowse.setEnabled(true);
+                        btnClean.setEnabled(true);
+                        editMessageTest.setEnabled(true);
+
+                        btnStart.setBackgroundResource(R.drawable.play_up);
+                        btnStop.setBackgroundResource(R.drawable.stop_down);
+                        btnPause.setBackgroundResource(R.drawable.pausa_down);
+                        btnBrowse.setBackgroundResource(R.drawable.browse_up);
+                        btnClean.setBackgroundResource(R.drawable.clean_up);
+                    }
                 }
             }
         };

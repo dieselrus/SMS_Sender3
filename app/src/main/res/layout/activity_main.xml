@@ -31,17 +31,7 @@
         android:layout_alignParentEnd="true"
         android:background="@drawable/browse_up"
         android:contentDescription="browse"
-        android:layout_marginTop="5dp"/>
-
-    <ImageButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/imageButtonBrowse"
-        android:background="@drawable/browse_up"
-        android:layout_marginRight="5dp"
-        android:layout_alignTop="@+id/imgButtonBrowse"
-        android:layout_toLeftOf="@+id/imgButtonBrowse"
-        android:layout_toStartOf="@+id/imgButtonBrowse"
+        android:layout_marginTop="5dp"
         android:onClick="onClickBrowse" />
 
     <TextView
@@ -50,15 +40,15 @@
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:text="Small Text"
         android:id="@+id/tvPhoneNumberListPath"
-        android:layout_alignTop="@+id/imageButtonBrowse"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:background="@xml/rounded_edittext"
         android:minHeight="44dp"
         android:layout_marginRight="5dp"
         android:textColor="@android:color/black"
-        android:layout_toLeftOf="@+id/imageButtonBrowse"
-        android:layout_toStartOf="@+id/imageButtonBrowse" />
+        android:layout_alignTop="@+id/imgButtonBrowse"
+        android:layout_toLeftOf="@+id/imgButtonBrowse"
+        android:layout_toStartOf="@+id/imgButtonBrowse" />
 
     <TextView
         android:layout_width="wrap_content"
