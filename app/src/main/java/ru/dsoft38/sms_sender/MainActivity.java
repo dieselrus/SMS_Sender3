@@ -1,11 +1,13 @@
 package ru.dsoft38.sms_sender;
 
+import android.app.ActivityManager;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
@@ -435,18 +437,14 @@ public class MainActivity extends ActionBarActivity {
         //stopService(new Intent(this,MainService.class));
     }
 
-    public void setAppList( ArrayList<ApplicationInfo> _applist){
-        this.applist = _applist;
-        isGetAppList = true;
-    }
-
-// ============================================= Получение списка установленных программ ==============================
+// ============================================= Получение списка установленных плагинов ==============================
     private List<ApplicationInfo> checkForLaunchIntent(List<ApplicationInfo> list) {
         ArrayList<ApplicationInfo> applist = new ArrayList<ApplicationInfo>();
         for (ApplicationInfo info : list) {
             try {
-
-                if (null != packageManager.getLaunchIntentForPackage(info.packageName)) {
+                boolean a = info.processName.startsWith("ru.dsoft38.sms_sender_plugin");
+                if (info.processName.startsWith("ru.dsoft38.sms_sender_plugin")) {
+                    Log.d("AppList", "AppList " + info.processName.toString());
                     applist.add(info);
                 }
             } catch (Exception e) {
@@ -462,7 +460,7 @@ public class MainActivity extends ActionBarActivity {
 
         @Override
         protected Void doInBackground(Void... params) {
-            applist = checkForLaunchIntent(packageManager.getInstalledApplications(PackageManager.GET_META_DATA));
+            applist = checkForLaunchIntent(packageManager.getInstalledApplications(PackageManager.GET_SERVICES));
             //listadaptor = new ApplicationAdapter(AllAppsActivity.this, R.layout.snippet_list_row, applist);
 
             return null;
@@ -483,7 +481,7 @@ public class MainActivity extends ActionBarActivity {
 
         @Override
         protected void onPreExecute() {
-            progress = ProgressDialog.show(MainActivity.this, null, "Loading application info...");
+            progress = ProgressDialog.show(MainActivity.this, null, "Получение списка установленных плагинов...");
             super.onPreExecute();
         }
 
