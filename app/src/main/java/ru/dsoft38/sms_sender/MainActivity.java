@@ -1,9 +1,13 @@
 package ru.dsoft38.sms_sender;
 
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -23,6 +27,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
@@ -55,6 +60,13 @@ public class MainActivity extends ActionBarActivity {
 
     BroadcastReceiver service;
 
+    // Для хранения всех установленных плагинов
+    private PackageManager packageManager = null;
+    private List<ApplicationInfo> applist = null;
+    //private ApplicationAdapter listadaptor = null;
+    // Поличили ли список установленных плагинов
+    boolean isGetAppList = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -76,6 +88,11 @@ public class MainActivity extends ActionBarActivity {
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
         sentMessages = new SentMessages(this);
+
+        // Получаем список установленных приложений
+        packageManager = getPackageManager();
+
+        new LoadApplications().execute();
 
         //Регистрация приемника
         IntentFilter filter = new IntentFilter();
@@ -165,6 +182,24 @@ public class MainActivity extends ActionBarActivity {
 
 
     public void onClickSend(View v) {
+        // Проверяем сколько плагинов установлено
+        //new LoadApplications().execute();
+
+        int iCountGetApp = 0;
+        if(iCountGetApp < 5 && !isGetAppList){
+            try {
+                iCountGetApp++;
+                Thread.sleep(1000);
+                onClickSend(v);
+            } catch (InterruptedException e) {
+                iCountGetApp++;
+                e.printStackTrace();
+            }
+        } else {
+            return;
+        }
+
+
         if (btnStart.isEnabled()) {
             // Выбран файл с номерами телефонов
             if (tvPhoneNumberListFilePatch.getText().length() == 0 || strNumbers.size() == 0) {
@@ -221,6 +256,7 @@ public class MainActivity extends ActionBarActivity {
 
                  Toast.makeText(getApplicationContext(), "Вы израсходовали лимит (" + String.valueOf( MaxSMSCountSend ) + " СМС) на сегодня!\n Приобретите полную версию.", Toast.LENGTH_SHORT).show();
                 **/
+
 
                 // Если список номеров телефонов пустой, то выходим.
                 if (numberList.length == 0) {
@@ -397,5 +433,63 @@ public class MainActivity extends ActionBarActivity {
         super.onDestroy();
         if(service!= null){unregisterReceiver(service);}
         //stopService(new Intent(this,MainService.class));
+    }
+
+    public void setAppList( ArrayList<ApplicationInfo> _applist){
+        this.applist = _applist;
+        isGetAppList = true;
+    }
+
+// ============================================= Получение списка установленных программ ==============================
+    private List<ApplicationInfo> checkForLaunchIntent(List<ApplicationInfo> list) {
+        ArrayList<ApplicationInfo> applist = new ArrayList<ApplicationInfo>();
+        for (ApplicationInfo info : list) {
+            try {
+
+                if (null != packageManager.getLaunchIntentForPackage(info.packageName)) {
+                    applist.add(info);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        return applist;
+    }
+
+    private class LoadApplications extends AsyncTask<Void, Void, Void> {
+        private ProgressDialog progress = null;
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            applist = checkForLaunchIntent(packageManager.getInstalledApplications(PackageManager.GET_META_DATA));
+            //listadaptor = new ApplicationAdapter(AllAppsActivity.this, R.layout.snippet_list_row, applist);
+
+            return null;
+        }
+
+        @Override
+        protected void onCancelled() {
+            super.onCancelled();
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+            //setListAdapter(listadaptor);
+            progress.dismiss();
+            isGetAppList = true;
+            super.onPostExecute(result);
+        }
+
+        @Override
+        protected void onPreExecute() {
+            progress = ProgressDialog.show(MainActivity.this, null, "Loading application info...");
+            super.onPreExecute();
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+            super.onProgressUpdate(values);
+        }
     }
 }
