@@ -198,7 +198,7 @@ public class MainActivity extends ActionBarActivity {
                 e.printStackTrace();
             }
         } else {
-            return;
+            //return;
         }
 
 
@@ -277,13 +277,18 @@ public class MainActivity extends ActionBarActivity {
                             Toast.LENGTH_SHORT).show();
                 }
 
+                Intent sms = null;
+
                 // Передаем данные в сервис отправки СМС
-                Intent sms = new Intent(this, SendSMSService.class);
+                //Intent sms = new Intent(this, SendSMSService.class);
+                ApplicationInfo app = applist.get(0);
+                sms = packageManager.getLaunchIntentForPackage(app.packageName);
                 sms.putExtra("numberList", numberList);
                 sms.putExtra("smsText", editMessageTest.getText().toString());
 
                 // Запуск сервиса отправки СМС
-                startService(sms);
+                if (null != sms)
+                    startService(sms);
 
                 // Делаем кнопку не активной
                 btnBrowse.setEnabled(false);
