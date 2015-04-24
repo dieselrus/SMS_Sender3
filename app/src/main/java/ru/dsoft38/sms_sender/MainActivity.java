@@ -3,6 +3,7 @@ package ru.dsoft38.sms_sender;
 import android.app.ActivityManager;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -50,6 +51,8 @@ public class MainActivity extends ActionBarActivity {
     private EditText editMessageTest;
 
     private ProgressBar progressBar;
+    private TextView progressPercent;
+    private TextView progressCount;
 
     // Максимальная длина текста СМС
     private int maxSMSLen = 160;
@@ -57,8 +60,13 @@ public class MainActivity extends ActionBarActivity {
 
     // Текущее количество СМС
     private int smsCount = 1;
+    private int freeSMSCount = 0;
+    private int maxSMS = 0;
 
     protected SentMessages sentMessages;
+
+    // Интент для сервисов отправки СМС
+    Intent sms = null;
 
     BroadcastReceiver service;
 
@@ -88,6 +96,8 @@ public class MainActivity extends ActionBarActivity {
         tvMessage                   = (TextView) findViewById(R.id.tvMessage);
 
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        progressCount = (TextView) findViewById(R.id.progressCount);
+        progressPercent = (TextView) findViewById(R.id.progressPercent);
 
         sentMessages = new SentMessages(this);
 
@@ -111,11 +121,13 @@ public class MainActivity extends ActionBarActivity {
                     int smsCount = Integer.parseInt(intent.getStringExtra("smscount"));
                     Log.i("SMSSender", String.valueOf(smsCount));
                     progressBar.setProgress(smsCount);
+                    progressPercent.setText(String.valueOf(smsCount * 100 / maxSMS) + "%");
+                    progressCount.setText(String.valueOf(smsCount) + "/" + String.valueOf(maxSMS));
                     sentMessages.addSentSMSCount(smsCount);
 
                 } else if (intent.getAction().equals("SMSSenderServiceStatus")){
 
-                    if(intent.getAction().equals("stop")) {
+                    if(intent.getStringExtra("servicestatus").equals("stop")) {
                         btnStart.setEnabled(true);
                         btnPause.setEnabled(false);
                         btnStop.setEnabled(false);
@@ -226,7 +238,7 @@ public class MainActivity extends ActionBarActivity {
 
                 //AcceptSendCount();
 //=========================================================================================================================================================================================
-                int freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
+                freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
                 String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);    // Берем часть массива с номерама
                 String[] numberList = null;
 
@@ -244,7 +256,8 @@ public class MainActivity extends ActionBarActivity {
                 }
 
                 // Максимальное значение прогрессбара
-                progressBar.setMax(numberList.length);
+                maxSMS = numberList.length;
+                progressBar.setMax(maxSMS);
 
                 /**
                 if (strNumbers.size() <= 100){
@@ -277,12 +290,16 @@ public class MainActivity extends ActionBarActivity {
                             Toast.LENGTH_SHORT).show();
                 }
 
-                Intent sms = null;
+                //Intent sms = null;
 
                 // Передаем данные в сервис отправки СМС
                 //Intent sms = new Intent(this, SendSMSService.class);
                 ApplicationInfo app = applist.get(0);
-                sms = packageManager.getLaunchIntentForPackage(app.packageName);
+                ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
+
+                sms = new Intent(app.packageName);
+                sms.setComponent(component);
+
                 sms.putExtra("numberList", numberList);
                 sms.putExtra("smsText", editMessageTest.getText().toString());
 
@@ -312,7 +329,8 @@ public class MainActivity extends ActionBarActivity {
     public void onClickStop(View v) {
         if (btnStop.isEnabled()) {
             // Останавливаем отправку
-            stopService(new Intent(this, SendSMSService.class));
+            // stopService(new Intent(this, SendSMSService.class));
+            stopService(sms);
 
             btnStart.setEnabled(true);
             btnPause.setEnabled(false);

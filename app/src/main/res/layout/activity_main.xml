@@ -16,7 +16,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="Small Text"
         android:id="@+id/tvPhoneNumCount"
         android:layout_alignParentTop="true"
         android:layout_alignParentRight="true"
@@ -37,7 +36,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textAppearance="?android:attr/textAppearanceMedium"
         android:text="Small Text"
         android:id="@+id/tvPhoneNumberListPath"
         android:layout_alignParentLeft="true"
@@ -72,7 +71,7 @@
         android:layout_below="@+id/tvMessage"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_above="@+id/progressBar"
+        android:layout_above="@+id/progressPercent"
         android:background="@xml/rounded_edittext"
         android:gravity="top|left"
         android:isScrollContainer="true"
@@ -88,12 +87,13 @@
         android:layout_height="wrap_content"
         android:id="@+id/progressBar"
         android:indeterminate="false"
-        android:layout_above="@+id/imgButtonPause"
-        android:layout_marginBottom="15dp"
-        android:layout_alignRight="@+id/imgButtonBrowse"
-        android:layout_alignEnd="@+id/imgButtonBrowse"
+        android:layout_above="@+id/imgButtonSend"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
+        android:layout_alignParentStart="true"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginBottom="15dp"
+        android:layout_marginTop="15dp"/>
 
     <LinearLayout
         android:orientation="vertical"
@@ -142,5 +142,25 @@
         android:layout_alignEnd="@+id/imgButtonBrowse"
         android:background="@drawable/clean_down"
         android:onClick="onClickClean" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="0/0"
+        android:id="@+id/progressCount"
+        android:layout_above="@+id/progressBar"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="0%"
+        android:id="@+id/progressPercent"
+        android:layout_above="@+id/progressBar"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
 
 </RelativeLayout>
