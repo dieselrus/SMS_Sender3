@@ -56,8 +56,9 @@ public class MainActivity extends ActionBarActivity {
 
     // Максимальная длина текста СМС
     private int maxSMSLen = 160;
-    static List<String> strNumbers;
-
+    static List<String> strNumbers = null;
+    // private List<String[]> numberList = null;
+    private String[] numberList = null;
     // Текущее количество СМС
     private int smsCount = 1;
     private int freeSMSCount = 0;
@@ -67,6 +68,7 @@ public class MainActivity extends ActionBarActivity {
 
     // Интент для сервисов отправки СМС
     Intent sms = null;
+    private int iSMSServiceCount = 0;
 
     BroadcastReceiver service;
 
@@ -128,18 +130,40 @@ public class MainActivity extends ActionBarActivity {
                 } else if (intent.getAction().equals("SMSSenderServiceStatus")){
 
                     if(intent.getStringExtra("servicestatus").equals("stop")) {
-                        btnStart.setEnabled(true);
-                        btnPause.setEnabled(false);
-                        btnStop.setEnabled(false);
-                        btnBrowse.setEnabled(true);
-                        btnClean.setEnabled(true);
-                        editMessageTest.setEnabled(true);
 
-                        btnStart.setBackgroundResource(R.drawable.play_up);
-                        btnStop.setBackgroundResource(R.drawable.stop_down);
-                        btnPause.setBackgroundResource(R.drawable.pausa_down);
-                        btnBrowse.setBackgroundResource(R.drawable.browse_up);
-                        btnClean.setBackgroundResource(R.drawable.clean_up);
+                        // Если это последний сервис, разблокируем кнопки иначе стартуес следующее задание
+                        if(iSMSServiceCount > applist.size()) {
+                            btnStart.setEnabled(true);
+                            btnPause.setEnabled(false);
+                            btnStop.setEnabled(false);
+                            btnBrowse.setEnabled(true);
+                            btnClean.setEnabled(true);
+                            editMessageTest.setEnabled(true);
+
+                            btnStart.setBackgroundResource(R.drawable.play_up);
+                            btnStop.setBackgroundResource(R.drawable.stop_down);
+                            btnPause.setBackgroundResource(R.drawable.pausa_down);
+                            btnBrowse.setBackgroundResource(R.drawable.browse_up);
+                            btnClean.setBackgroundResource(R.drawable.clean_up);
+
+                            iSMSServiceCount = 0;
+                        } else {
+                            ApplicationInfo app = applist.get(iSMSServiceCount);
+                            ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
+
+                            sms = new Intent(app.packageName);
+                            sms.setComponent(component);
+
+                            sms.putExtra("numberList", numberList[0]);
+                            sms.putExtra("smsText", editMessageTest.getText().toString());
+
+                            // Запуск сервиса отправки СМС
+                            if (null != sms)
+                                startService(sms);
+
+                            iSMSServiceCount++;
+                        }
+
                     }
                 }
             }
@@ -240,7 +264,7 @@ public class MainActivity extends ActionBarActivity {
 //=========================================================================================================================================================================================
                 freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
                 String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);    // Берем часть массива с номерама
-                String[] numberList = null;
+                //String[] numberList = null;
 
                 //System.arraycopy(numberListTemp, 0, numberList, 0, sourceArray.length);
 
@@ -293,19 +317,21 @@ public class MainActivity extends ActionBarActivity {
                 //Intent sms = null;
 
                 // Передаем данные в сервис отправки СМС
-                //Intent sms = new Intent(this, SendSMSService.class);
+                sms = new Intent(this, SendSMSService.class);
+                /*
                 ApplicationInfo app = applist.get(0);
                 ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
 
                 sms = new Intent(app.packageName);
                 sms.setComponent(component);
-
+                */
                 sms.putExtra("numberList", numberList);
                 sms.putExtra("smsText", editMessageTest.getText().toString());
 
                 // Запуск сервиса отправки СМС
                 if (null != sms)
                     startService(sms);
+
 
                 // Делаем кнопку не активной
                 btnBrowse.setEnabled(false);
@@ -323,6 +349,31 @@ public class MainActivity extends ActionBarActivity {
 
             }
         }
+    }
+
+    List createNumberList(List<String> lst){
+        List<List<String>> lstNumber = null;
+
+        // int a = lst.size() % count;
+        // Как округлить до большего целого результат деления
+        // int x = Math.ceil((double)a / b).intValue();
+
+        List<String> tmp = new ArrayList<String>();
+        int j = 0;
+
+        for ( int i = lst.size(); i > 0; i-- ){
+            if( j < 30 ) {
+                tmp.add(lst.get(i));
+                lst.remove(i);
+                j++;
+            } else {
+                j = 0;
+                lstNumber.add(tmp);
+                tmp.clear();
+            }
+        }
+
+        return lstNumber;
     }
 
     // Назначаем обработчик нажатия на кнопку остановки отправки
