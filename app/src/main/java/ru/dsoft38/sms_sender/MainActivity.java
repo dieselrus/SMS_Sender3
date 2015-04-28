@@ -328,7 +328,10 @@ public class MainActivity extends ActionBarActivity {
                 sms.setComponent(component);
                 */
 
-                sms.putExtra("numberList", numberList.toArray(new String[numberList.size()]));
+                ArrayList<String> num = numberList.get(0);
+
+
+                sms.putExtra("numberList", num);
                 sms.putExtra("smsText", editMessageTest.getText().toString());
 
                 // Запуск сервиса отправки СМС
