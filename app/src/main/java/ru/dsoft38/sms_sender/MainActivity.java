@@ -31,6 +31,7 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
 
@@ -57,8 +58,8 @@ public class MainActivity extends ActionBarActivity {
     // Максимальная длина текста СМС
     private int maxSMSLen = 160;
     static List<String> strNumbers = null;
-    // private List<String[]> numberList = null;
-    private String[] numberList = null;
+    private List<String[]> numberList = null;
+    //private String[] numberList = null;
     // Текущее количество СМС
     private int smsCount = 1;
     private int freeSMSCount = 0;
@@ -154,7 +155,7 @@ public class MainActivity extends ActionBarActivity {
                             sms = new Intent(app.packageName);
                             sms.setComponent(component);
 
-                            sms.putExtra("numberList", numberList[0]);
+                            sms.putExtra("numberList", numberList.get(0));
                             sms.putExtra("smsText", editMessageTest.getText().toString());
 
                             // Запуск сервиса отправки СМС
@@ -263,48 +264,49 @@ public class MainActivity extends ActionBarActivity {
                 //AcceptSendCount();
 //=========================================================================================================================================================================================
                 freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
-                String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);    // Берем часть массива с номерама
+                //String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);    // Берем часть массива с номерама
+                List<String> numberListTemp = null;
                 //String[] numberList = null;
 
                 //System.arraycopy(numberListTemp, 0, numberList, 0, sourceArray.length);
 
+                List<String> numberList = null;
+
+
                 // В зависимости от оставшихся СМС и количества необходимого отправить, устанавливаем размер массива
                 if ( strNumbers.size() <= freeSMSCount ){
-                    //numberList = strNumbers.toArray(new String[strNumbers.size()]);
+                    /*
+                    numberList = strNumbers.toArray(new String[strNumbers.size()]);
                     numberList = new String[strNumbers.size()];
                     System.arraycopy(numberListTemp, 0, numberList, 0, strNumbers.size());
+                    */
+
+                    // Максимальное значение прогрессбара
+                    maxSMS = strNumbers.size();
+                    numberList = createNumberList(strNumbers);
                 } else {
                     //numberList = strNumbers.toArray(new String[freeSMSCount]);
+                    /*
                     numberList = new String[freeSMSCount];
                     System.arraycopy(numberListTemp, 0, numberList, 0, freeSMSCount);
+                    */
+                    // Максимальное значение прогрессбара
+                    maxSMS = freeSMSCount;
+                    numberList = createNumberList(strNumbers.subList(0, freeSMSCount));
                 }
 
                 // Максимальное значение прогрессбара
-                maxSMS = numberList.length;
+                //maxSMS = numberList.size();
                 progressBar.setMax(maxSMS);
 
-                /**
-                if (strNumbers.size() <= 100){
-                    numberList = strNumbers.toArray(new String[strNumbers.size()]);
-                } else {
-                    // Устанавливаем размер списка равный оставшимся на сегодня кол-ом не отправленных СМС
-                    numberList = strNumbers.toArray(new String[100]);
-                }
-
-                 Toast.makeText(getApplicationContext(), "Будет отправленно " + String.valueOf( freeSMS ) + "!\n Сегодня Вы уже отправили " + String.valueOf( iSMSCount ) + " СМС. \n Приобретите полную версию.", Toast.LENGTH_SHORT).show();
-
-                 Toast.makeText(getApplicationContext(), "Вы израсходовали лимит (" + String.valueOf( MaxSMSCountSend ) + " СМС) на сегодня!\n Приобретите полную версию.", Toast.LENGTH_SHORT).show();
-                **/
-
-
                 // Если список номеров телефонов пустой, то выходим.
-                if (numberList.length == 0) {
+                if (numberList.size() == 0) {
                     Toast.makeText(getApplicationContext(),
                             "Вы израсходовали лимит (" + String.valueOf( sentMessages.MaxSMSCountSend ) +
                                     " СМС) на сегодня!\n Приобретите полную версию.",
                             Toast.LENGTH_SHORT).show();
                     return;
-                } else if ( numberList.length == 100 ) {
+                } else if ( numberList.size() == 100 ) {
 
                 } else {
                     Toast.makeText(getApplicationContext(),
@@ -325,7 +327,8 @@ public class MainActivity extends ActionBarActivity {
                 sms = new Intent(app.packageName);
                 sms.setComponent(component);
                 */
-                sms.putExtra("numberList", numberList);
+
+                sms.putExtra("numberList", numberList.toArray(new String[numberList.size()]));
                 sms.putExtra("smsText", editMessageTest.getText().toString());
 
                 // Запуск сервиса отправки СМС
@@ -351,8 +354,8 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    List createNumberList(List<String> lst){
-        List<List<String>> lstNumber = null;
+    private List createNumberList(List<String> lst){
+        List<List<String>> lstNumber = new ArrayList<List<String>>();
 
         // int a = lst.size() % count;
         // Как округлить до большего целого результат деления
@@ -360,18 +363,21 @@ public class MainActivity extends ActionBarActivity {
 
         List<String> tmp = new ArrayList<String>();
         int j = 0;
+        int k = lst.size();
 
-        for ( int i = lst.size(); i > 0; i-- ){
-            if( j < 30 ) {
-                tmp.add(lst.get(i));
-                lst.remove(i);
-                j++;
-            } else {
+        for ( int i = k; i > 0; i-- ){
+            if( j == 30 ) {
                 j = 0;
                 lstNumber.add(tmp);
-                tmp.clear();
+                tmp = new ArrayList<String>();
             }
+
+            tmp.add(lst.get(i - 1));
+            lst.remove(i - 1);
+            j++;
         }
+
+        lstNumber.add(tmp);
 
         return lstNumber;
     }
