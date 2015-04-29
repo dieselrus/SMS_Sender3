@@ -57,13 +57,14 @@ public class MainActivity extends ActionBarActivity {
 
     // Максимальная длина текста СМС
     private int maxSMSLen = 160;
-    static List<String> strNumbers = null;
-    private List<String[]> numberList = null;
+    static List<String> strNumbers = new ArrayList<>();
+    private List<List<String>> numberList = null;
     //private String[] numberList = null;
     // Текущее количество СМС
     private int smsCount = 1;
     private int freeSMSCount = 0;
     private int maxSMS = 0;
+    final static private int iSMSCountPerHour = 30;
 
     protected SentMessages sentMessages;
 
@@ -155,7 +156,10 @@ public class MainActivity extends ActionBarActivity {
                             sms = new Intent(app.packageName);
                             sms.setComponent(component);
 
-                            sms.putExtra("numberList", numberList.get(0));
+                            //List<String> a = numberList.get(0);
+                            //String[] num =  a.toArray(new String[a.size()]);
+
+                            sms.putExtra("numberList", numberList.get(0).toArray(new String[numberList.size()]));
                             sms.putExtra("smsText", editMessageTest.getText().toString());
 
                             // Запуск сервиса отправки СМС
@@ -265,12 +269,12 @@ public class MainActivity extends ActionBarActivity {
 //=========================================================================================================================================================================================
                 freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
                 //String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);    // Берем часть массива с номерама
-                List<String> numberListTemp = null;
+                //ArrayList<String> numberListTemp = null;
                 //String[] numberList = null;
 
                 //System.arraycopy(numberListTemp, 0, numberList, 0, sourceArray.length);
 
-                List<String> numberList = null;
+                //ArrayList<String> numberList = null;
 
 
                 // В зависимости от оставшихся СМС и количества необходимого отправить, устанавливаем размер массива
@@ -328,10 +332,12 @@ public class MainActivity extends ActionBarActivity {
                 sms.setComponent(component);
                 */
 
-                ArrayList<String> num = numberList.get(0);
+                //List<String> a = numberList.get(0);
+                //String[] num =  a.toArray(new String[a.size()]);
+                //num = numberList.get(0);
 
 
-                sms.putExtra("numberList", num);
+                sms.putExtra("numberList", numberList.get(0).toArray(new String[ numberList.get(0).size()]));
                 sms.putExtra("smsText", editMessageTest.getText().toString());
 
                 // Запуск сервиса отправки СМС
@@ -357,22 +363,23 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    private List createNumberList(List<String> lst){
-        List<List<String>> lstNumber = new ArrayList<List<String>>();
+    private List<List<String>> createNumberList(List<String> lst){
+        List<List<String>> lstNumber = new ArrayList<>();
 
         // int a = lst.size() % count;
         // Как округлить до большего целого результат деления
         // int x = Math.ceil((double)a / b).intValue();
 
-        List<String> tmp = new ArrayList<String>();
+        List<String> tmp = new ArrayList<>();
+
         int j = 0;
         int k = lst.size();
 
         for ( int i = k; i > 0; i-- ){
-            if( j == 30 ) {
+            if( j == iSMSCountPerHour ) {
                 j = 0;
                 lstNumber.add(tmp);
-                tmp = new ArrayList<String>();
+                tmp = new ArrayList<>();
             }
 
             tmp.add(lst.get(i - 1));
@@ -382,6 +389,7 @@ public class MainActivity extends ActionBarActivity {
 
         lstNumber.add(tmp);
 
+        // return lstNumber.toArray(new String[lstNumber.size()]);
         return lstNumber;
     }
 
