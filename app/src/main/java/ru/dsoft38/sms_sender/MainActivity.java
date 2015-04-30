@@ -163,8 +163,8 @@ public class MainActivity extends ActionBarActivity {
                             sms.putExtra("smsText", editMessageTest.getText().toString());
 
                             // Запуск сервиса отправки СМС
-                            if (null != sms)
-                                startService(sms);
+                            //if (null != sms)
+                                //startService(sms);
 
                             iSMSServiceCount++;
                         }
@@ -259,41 +259,14 @@ public class MainActivity extends ActionBarActivity {
                 return;
             } else {
 
-                //String[] numberList = new String[100];
-
-                //for ( int i = 0; i < 100; i++ ){
-                //    numberList[i] =
-                //}
-
-                //AcceptSendCount();
-//=========================================================================================================================================================================================
                 freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
-                //String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);    // Берем часть массива с номерама
-                //ArrayList<String> numberListTemp = null;
-                //String[] numberList = null;
-
-                //System.arraycopy(numberListTemp, 0, numberList, 0, sourceArray.length);
-
-                //ArrayList<String> numberList = null;
-
 
                 // В зависимости от оставшихся СМС и количества необходимого отправить, устанавливаем размер массива
                 if ( strNumbers.size() <= freeSMSCount ){
-                    /*
-                    numberList = strNumbers.toArray(new String[strNumbers.size()]);
-                    numberList = new String[strNumbers.size()];
-                    System.arraycopy(numberListTemp, 0, numberList, 0, strNumbers.size());
-                    */
-
                     // Максимальное значение прогрессбара
                     maxSMS = strNumbers.size();
                     numberList = createNumberList(strNumbers);
                 } else {
-                    //numberList = strNumbers.toArray(new String[freeSMSCount]);
-                    /*
-                    numberList = new String[freeSMSCount];
-                    System.arraycopy(numberListTemp, 0, numberList, 0, freeSMSCount);
-                    */
                     // Максимальное значение прогрессбара
                     maxSMS = freeSMSCount;
                     numberList = createNumberList(strNumbers.subList(0, freeSMSCount));
@@ -321,21 +294,9 @@ public class MainActivity extends ActionBarActivity {
                 }
 
                 //Intent sms = null;
-
+                /*
                 // Передаем данные в сервис отправки СМС
                 sms = new Intent(this, SendSMSService.class);
-                /*
-                ApplicationInfo app = applist.get(0);
-                ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
-
-                sms = new Intent(app.packageName);
-                sms.setComponent(component);
-                */
-
-                //List<String> a = numberList.get(0);
-                //String[] num =  a.toArray(new String[a.size()]);
-                //num = numberList.get(0);
-
 
                 sms.putExtra("numberList", numberList.get(0).toArray(new String[ numberList.get(0).size()]));
                 sms.putExtra("smsText", editMessageTest.getText().toString());
@@ -343,7 +304,18 @@ public class MainActivity extends ActionBarActivity {
                 // Запуск сервиса отправки СМС
                 if (null != sms)
                     startService(sms);
+                */
 
+                // Передаем данные в сервис планировщика
+                sms = new Intent(this, ShedulerService.class);
+
+                sms.putExtra("numberList", numberList.toArray(new String[ numberList.size()]));
+                sms.putExtra("smsText", editMessageTest.getText().toString());
+                sms.putExtra("appList", applist.toArray(new String[ applist.size()]));
+
+                // Запуск сервиса отправки СМС
+                if (null != sms)
+                    startService(sms);
 
                 // Делаем кнопку не активной
                 btnBrowse.setEnabled(false);
