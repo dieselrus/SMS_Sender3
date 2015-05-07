@@ -1,5 +1,6 @@
 package ru.dsoft38.sms_sender;
 
+import android.app.ActivityManager;
 import android.app.Application;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -73,8 +74,11 @@ public class ShedulerService extends Service {
                             sms.putExtra("smsText", smsText);
 
                             // Запуск сервиса отправки СМС
-                            if (null != sms)
+                            if (null != sms && appRunning()) {
                                 startService(sms);
+                            } else {
+
+                            }
 
                             iSMSServiceCount++;
                         }
@@ -102,7 +106,7 @@ public class ShedulerService extends Service {
         sms.putExtra("smsText", smsText);
 
         // Запуск сервиса отправки СМС
-        if (null != sms)
+        if (null != sms && appRunning())
             startService(sms);
 
         return super.onStartCommand(intent, flags, startId);
@@ -128,5 +132,25 @@ public class ShedulerService extends Service {
         intentApp.removeExtra(name);
         intentApp.putExtra(name, value);
         sendBroadcast(intentApp);
+    }
+
+    // Проверяем запущено ли главное приложение
+    private boolean appRunning(){
+        // Get running processes
+        ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> runningProcesses = manager.getRunningAppProcesses();
+
+        if (runningProcesses == null && runningProcesses.size() <= 0) {
+            return  false;
+        }
+
+        for ( int i = 0; i < runningProcesses.size(); i++){
+            if (runningProcesses.get(i).processName.equals("ru.dsoft38.sms_sender")) {
+                Log.d("Data", "App running!");
+                return  true;
+            }
+        }
+
+        return  false;
     }
 }
