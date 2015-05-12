@@ -1,6 +1,5 @@
 package ru.dsoft38.sms_sender;
 
-import android.app.ActivityManager;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -8,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
@@ -31,7 +29,6 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
 
@@ -81,6 +78,10 @@ public class MainActivity extends ActionBarActivity {
     // Поличили ли список установленных плагинов
     boolean isGetAppList = false;
 
+    // база данных
+    //SQLiteDatabase sdb;
+    //SMSdbHelper sqlHelper;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -110,6 +111,14 @@ public class MainActivity extends ActionBarActivity {
 
         new LoadApplications().execute();
 
+/*
+        // Инициализируем наш класс-обёртку для базы данных
+        sqlHelper = new SMSdbHelper(this, null, null, 0);
+
+        // База нам нужна для записи и чтения
+        sdb = sqlHelper.getWritableDatabase();
+*/
+
         //Регистрация приемника
         IntentFilter filter = new IntentFilter();
         filter.addAction("SMSSenderSMSCount");
@@ -128,6 +137,8 @@ public class MainActivity extends ActionBarActivity {
                     progressPercent.setText(String.valueOf(smsCount * 100 / maxSMS) + "%");
                     progressCount.setText(String.valueOf(smsCount) + "/" + String.valueOf(maxSMS));
                     sentMessages.addSentSMSCount(smsCount);
+
+                    // Записываем в базу какой плагин и во сколько отправил сообщение
 
                 } else if (intent.getAction().equals("SMSSenderServiceStatus")){
 
@@ -308,6 +319,7 @@ public class MainActivity extends ActionBarActivity {
 
                 // Передаем данные в сервис планировщика
                 sms = new Intent(this, ShedulerService.class);
+                //sms = new Intent(this, SendSMSService.class);
 
                 sms.putExtra("numberList", numberList.toArray(new String[ numberList.size()]));
                 sms.putExtra("smsText", editMessageTest.getText().toString());
@@ -496,6 +508,10 @@ public class MainActivity extends ActionBarActivity {
     protected void onDestroy()
     {
         super.onDestroy();
+        // закрываем соединения с базой данных
+        //sdb.close();
+        //sqlHelper.close();
+
         if(service!= null){unregisterReceiver(service);}
         //stopService(new Intent(this,MainService.class));
     }

@@ -1,7 +1,6 @@
 package ru.dsoft38.sms_sender;
 
 import android.app.ActivityManager;
-import android.app.Application;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -9,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -36,6 +36,10 @@ public class ShedulerService extends Service {
 
     BroadcastReceiver service;
 
+    // база данных
+    private SQLiteDatabase sdb;
+    private SMSdbHelper sqlHelper;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -49,12 +53,27 @@ public class ShedulerService extends Service {
         // Для передачи данных обратно приложению
         intentApp = new Intent("SMSSender");
 
+        // Инициализируем наш класс-обёртку для базы данных
+        sqlHelper = new SMSdbHelper(this, null, null, 0);
+        // База нам нужна для записи и чтения
+        sdb = sqlHelper.getWritableDatabase();
+
         service = new BroadcastReceiver()
         {
             @Override
             public void onReceive(Context context, Intent intent)
             {
-                if (intent.getAction().equals("SMSSenderServiceStatus")){
+                if(intent.getAction().equals("SMSSenderSMSCount"))
+                {
+                    String smsCount = intent.getStringExtra("smscount");
+                    Log.i("SMSSender", String.valueOf(smsCount));
+
+                    // Записываем в базу какой плагин и во сколько отправил сообщение
+                    String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
+                            + " (" + sqlHelper.PLUGIN + "," + sqlHelper.SENDTIMESTAMP + ") VALUES ('" + sms + "', '" + sms + "')";
+                    sdb.execSQL(insertQuery);
+
+                } else if (intent.getAction().equals("SMSSenderServiceStatus")){
 
                     if(intent.getStringExtra("servicestatus").equals("stop")) {
 
@@ -121,6 +140,11 @@ public class ShedulerService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        // закрываем соединения с базой данных
+        sdb.close();
+        sqlHelper.close();
+
         Log.d(LOG_TAG, "onDestroy");
         // Уведомляем главное окно о том что сервиз остановлен (закрылся)
         sendDataToApp("SMSSenderServiceStatus", "servicestatus", "stop");
