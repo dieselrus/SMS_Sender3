@@ -69,7 +69,7 @@ public class MainActivity extends ActionBarActivity {
     private int freeSMSCount = 0;
     private int maxSMS = 0;
     final static private int iSMSCountPerTime = 30;
-    final static private int iTimeSMSLimitForApp = 15 * 60 * 1000; // 900000 milis = 15 min
+    final static private long lTimeSMSLimitForApp = 15 * 60 * 1000; // 900000 milis = 15 min
 
     protected SentMessages sentMessages;
 
@@ -89,7 +89,7 @@ public class MainActivity extends ActionBarActivity {
     // SQLite
     SMSDataBaseHelper sqlHelper;
     SQLiteDatabase sdb;
-    Date date;
+    private Date currentDate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +101,8 @@ public class MainActivity extends ActionBarActivity {
 
         // База нам нужна для записи и чтения
         sdb = sqlHelper.getWritableDatabase();
+
+        currentDate = new java.util.Date();
 
         btnBrowse   = (ImageButton) findViewById(R.id.imgButtonBrowse);
         btnStart    = (ImageButton) findViewById(R.id.imgButtonSend);
@@ -145,9 +147,6 @@ public class MainActivity extends ActionBarActivity {
                     progressCount.setText(String.valueOf(smsCount) + "/" + String.valueOf(maxSMS));
                     sentMessages.addSentSMSCount(smsCount);
 
-                    // Insert plugin name and current timestamp to db
-                    date= new java.util.Date();
-
                     /*
                     String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
                             + " (" + sqlHelper.PLUGIN_NAME + ", " + sqlHelper.SENT_TIME + ") VALUES ('"
@@ -157,7 +156,7 @@ public class MainActivity extends ActionBarActivity {
                     // count miliseconds from 01.01.1970
                     String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
                             + " (" + sqlHelper.PLUGIN_NAME + ", " + sqlHelper.SENT_TIME + ") VALUES ('"
-                            +  sms.getComponent().getPackageName() + "','" + date.getTime() + "')";
+                            +  sms.getComponent().getPackageName() + "','" + currentDate.getTime() + "')";
 
                     sdb.execSQL(insertQuery);
                     Log.w("LOG_TAG", "DATA INSERT");
@@ -275,7 +274,6 @@ public class MainActivity extends ActionBarActivity {
             //return;
         }
 
-
         if (btnStart.isEnabled()) {
             // Выбран файл с номерами телефонов
             if (tvPhoneNumberListFilePatch.getText().length() == 0 || strNumbers.size() == 0) {
@@ -306,6 +304,15 @@ public class MainActivity extends ActionBarActivity {
                     numberList = createNumberList(strNumbers.subList(0, freeSMSCount));
                 }
 
+                if (getMinPluginsCount(numberList.size()) < applist.size()){
+
+                    Toast.makeText(getApplicationContext(),
+                            String.format("Для отправки СМС на все номера не хватает установленных плагинов.\n Установите уще %d плагин(ов).", numberList.size() - applist.size()),
+                            Toast.LENGTH_LONG).show();
+
+                    return;
+                }
+
                 // Максимальное значение прогрессбара
                 //maxSMS = numberList.size();
                 progressBar.setMax(maxSMS);
@@ -330,14 +337,14 @@ public class MainActivity extends ActionBarActivity {
                 //Intent sms = null;
 
                 // Передаем данные в сервис отправки СМС
-                sms = new Intent(this, SendSMSService.class);
-                /*
+                //sms = new Intent(this, SendSMSService.class);
+
                 ApplicationInfo app = applist.get(0);
                 ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
 
                 sms = new Intent(app.packageName);
                 sms.setComponent(component);
-                */
+
 
                 //List<String> a = numberList.get(0);
                 //String[] num =  a.toArray(new String[a.size()]);
@@ -379,14 +386,26 @@ public class MainActivity extends ActionBarActivity {
 
         List<String> tmp = new ArrayList<>();
 
+        // счетчик для списка плагинов и количество свободных СМС для плагина
+        int app = 0;
+        int currentSMSCount = iSMSCountPerTime - getSentSMSCountPluIn(applist.get(app).packageName);
+
+        // счетчик для списка номеров каждому плагину
         int j = 0;
+        // счетчик для номеров в списке
         int k = lst.size();
 
         for ( int i = k; i > 0; i-- ){
-            if( j == iSMSCountPerTime ) {
+            if( j == currentSMSCount ) {
                 j = 0;
                 lstNumber.add(tmp);
                 tmp = new ArrayList<>();
+
+                // увеличиваем счетчик списка плагинов
+                app++;
+                // если счетчик не превышает количества плагинов
+                if( app < applist.size())
+                    currentSMSCount = iSMSCountPerTime - getSentSMSCountPluIn(applist.get(app).packageName);
             }
 
             tmp.add(lst.get(i - 1));
@@ -541,6 +560,10 @@ public class MainActivity extends ActionBarActivity {
 // ============================================= Получение списка установленных плагинов ==============================
     private List<ApplicationInfo> checkForLaunchIntent(List<ApplicationInfo> list) {
         ArrayList<ApplicationInfo> applist = new ArrayList<ApplicationInfo>();
+
+        // добавил сервис в самой программе первым номером
+        applist.add(this.getApplicationInfo());
+
         for (ApplicationInfo info : list) {
             try {
                 boolean a = info.processName.startsWith("ru.dsoft38.sms_sender_plugin");
@@ -596,12 +619,14 @@ public class MainActivity extends ActionBarActivity {
     private int getSentSMSCountPluIn(String pluginName){
         int count = 0;
 
-        // select COUNT(plugin_sent_table.plugin_name) from plugin_sent_table where plugin_sent_table.plugin_name = 'ru.dsoft38.sms_sender' AND plugin_sent_table.sent_time > 1431852195267 - 900000
+        //String query = "select COUNT(plugin_sent_table.plugin_name) AS count from plugin_sent_table where plugin_sent_table.plugin_name = 'ru.dsoft38.sms_sender' AND plugin_sent_table.sent_time > 1431852195267 - 900000;";
+
         String query = "SELECT COUNT(" + sqlHelper.PLUGIN_NAME + ") AS count FROM "
                 + sqlHelper.TABLE_NAME + " WHERE "
-                + sqlHelper.PLUGIN_NAME + " = " + pluginName
-                + " AND " + sqlHelper.SENT_TIME + " > "
-                + String.valueOf(date.getTime() - iTimeSMSLimitForApp) + ";";
+                + sqlHelper.PLUGIN_NAME + " = '" + pluginName
+                + "' AND " + sqlHelper.SENT_TIME + " > "
+                + currentDate.getTime() + "-" + lTimeSMSLimitForApp
+                + ";";
 
         Cursor cursor2 = sdb.rawQuery(query, null);
 
@@ -613,5 +638,24 @@ public class MainActivity extends ActionBarActivity {
         Log.i("LOG_TAG", "Plug-in " + pluginName + " sent " + count + " SMS per 15 minuts.");
 
         return count;
+    }
+
+    /** получаем минимальное количество плагинов, необходимое для отправки по всему списку номеров.
+     * с учетом уже отправленных плагином СМС, но без учета повторной отправки плагином после таймаута.
+     * На вход подается количество номеров в списке.
+    **/
+    private int getMinPluginsCount(int numCount){
+        int count = 0;
+
+        while (numCount > 0){
+            if(numCount < applist.size()) {
+                numCount = numCount - getSentSMSCountPluIn(applist.get(count).toString());
+            } else {
+                numCount = numCount - iSMSCountPerTime;
+            }
+            count++;
+        }
+
+        return  count;
     }
 }
