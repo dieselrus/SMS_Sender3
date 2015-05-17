@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Vector;
 
@@ -66,7 +68,8 @@ public class MainActivity extends ActionBarActivity {
     private int smsCount = 1;
     private int freeSMSCount = 0;
     private int maxSMS = 0;
-    final static private int iSMSCountPerHour = 30;
+    final static private int iSMSCountPerTime = 30;
+    final static private int iTimeSMSLimitForApp = 15 * 60 * 1000; // 900000 milis = 15 min
 
     protected SentMessages sentMessages;
 
@@ -86,6 +89,7 @@ public class MainActivity extends ActionBarActivity {
     // SQLite
     SMSDataBaseHelper sqlHelper;
     SQLiteDatabase sdb;
+    Date date;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -142,7 +146,7 @@ public class MainActivity extends ActionBarActivity {
                     sentMessages.addSentSMSCount(smsCount);
 
                     // Insert plugin name and current timestamp to db
-                    java.util.Date date= new java.util.Date();
+                    date= new java.util.Date();
 
                     /*
                     String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
@@ -379,7 +383,7 @@ public class MainActivity extends ActionBarActivity {
         int k = lst.size();
 
         for ( int i = k; i > 0; i-- ){
-            if( j == iSMSCountPerHour ) {
+            if( j == iSMSCountPerTime ) {
                 j = 0;
                 lstNumber.add(tmp);
                 tmp = new ArrayList<>();
@@ -586,5 +590,28 @@ public class MainActivity extends ActionBarActivity {
         protected void onProgressUpdate(Void... values) {
             super.onProgressUpdate(values);
         }
+    }
+
+    // получение количества отправленных смс за время ограничения
+    private int getSentSMSCountPluIn(String pluginName){
+        int count = 0;
+
+        // select COUNT(plugin_sent_table.plugin_name) from plugin_sent_table where plugin_sent_table.plugin_name = 'ru.dsoft38.sms_sender' AND plugin_sent_table.sent_time > 1431852195267 - 900000
+        String query = "SELECT COUNT(" + sqlHelper.PLUGIN_NAME + ") AS count FROM "
+                + sqlHelper.TABLE_NAME + " WHERE "
+                + sqlHelper.PLUGIN_NAME + " = " + pluginName
+                + " AND " + sqlHelper.SENT_TIME + " > "
+                + String.valueOf(date.getTime() - iTimeSMSLimitForApp) + ";";
+
+        Cursor cursor2 = sdb.rawQuery(query, null);
+
+        while (cursor2.moveToNext()) {
+            count = cursor2.getInt(cursor2.getColumnIndex("count"));
+        }
+        cursor2.close();
+
+        Log.i("LOG_TAG", "Plug-in " + pluginName + " sent " + count + " SMS per 15 minuts.");
+
+        return count;
     }
 }
