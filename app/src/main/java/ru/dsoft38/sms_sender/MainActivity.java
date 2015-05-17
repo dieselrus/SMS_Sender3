@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -30,6 +31,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -81,10 +83,20 @@ public class MainActivity extends ActionBarActivity {
     // Поличили ли список установленных плагинов
     boolean isGetAppList = false;
 
+    // SQLite
+    SMSDataBaseHelper sqlHelper;
+    SQLiteDatabase sdb;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Инициализируем наш класс-обёртку
+        sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
+
+        // База нам нужна для записи и чтения
+        sdb = sqlHelper.getWritableDatabase();
 
         btnBrowse   = (ImageButton) findViewById(R.id.imgButtonBrowse);
         btnStart    = (ImageButton) findViewById(R.id.imgButtonSend);
@@ -128,6 +140,15 @@ public class MainActivity extends ActionBarActivity {
                     progressPercent.setText(String.valueOf(smsCount * 100 / maxSMS) + "%");
                     progressCount.setText(String.valueOf(smsCount) + "/" + String.valueOf(maxSMS));
                     sentMessages.addSentSMSCount(smsCount);
+
+                    // Insert plugin name and current timestamp to db
+                    java.util.Date date= new java.util.Date();
+
+                    String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
+                            + " (" + sqlHelper.PLUGIN_NAME + ", " + sqlHelper.SENT_TIME + ") VALUES ('"
+                            +  sms.getComponent().getPackageName() + "','" + new Timestamp(date.getTime()) + "')";
+
+                    sdb.execSQL(insertQuery);
 
                 } else if (intent.getAction().equals("SMSSenderServiceStatus")){
 
@@ -526,6 +547,9 @@ public class MainActivity extends ActionBarActivity {
         super.onDestroy();
         if(service!= null){unregisterReceiver(service);}
         //stopService(new Intent(this,MainService.class));
+        // закрываем соединения с базой данных
+        sdb.close();
+        sqlHelper.close();
     }
 
 // ============================================= Получение списка установленных плагинов ==============================
