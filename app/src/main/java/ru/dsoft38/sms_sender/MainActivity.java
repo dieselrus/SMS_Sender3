@@ -1,6 +1,5 @@
 package ru.dsoft38.sms_sender;
 
-import android.app.ActivityManager;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -8,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -32,9 +30,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Vector;
@@ -63,7 +59,7 @@ public class MainActivity extends ActionBarActivity {
     private int maxSMSLen = 160;
     static List<String> strNumbers = new ArrayList<>();
     private List<List<String>> numberList = null;
-    //private String[] numberList = null;
+
     // Текущее количество СМС
     private int smsCount = 1;
     private int freeSMSCount = 0;
@@ -74,21 +70,21 @@ public class MainActivity extends ActionBarActivity {
     protected SentMessages sentMessages;
 
     // Интент для сервисов отправки СМС
-    Intent sms = null;
+    private Intent sms = null;
     private int iSMSServiceCount = 0;
 
-    BroadcastReceiver service;
+    private BroadcastReceiver service;
 
     // Для хранения всех установленных плагинов
     private PackageManager packageManager = null;
     private List<ApplicationInfo> applist = null;
-    //private ApplicationAdapter listadaptor = null;
+
     // Поличили ли список установленных плагинов
     boolean isGetAppList = false;
 
     // SQLite
-    SMSDataBaseHelper sqlHelper;
-    SQLiteDatabase sdb;
+    private SMSDataBaseHelper sqlHelper;
+    private SQLiteDatabase sdb;
     private Date currentDate;
 
     @Override
@@ -133,6 +129,9 @@ public class MainActivity extends ActionBarActivity {
         filter.addAction("SMSSenderSMSCount");
         filter.addAction("SMSSenderServiceStatus");
 
+        /**
+         * обработка широковещательных сообщений
+         */
         service = new BroadcastReceiver()
         {
             @Override
@@ -180,16 +179,13 @@ public class MainActivity extends ActionBarActivity {
                             btnBrowse.setBackgroundResource(R.drawable.browse_up);
                             btnClean.setBackgroundResource(R.drawable.clean_up);
 
-                            iSMSServiceCount = 0;
+                            iSMSServiceCount = 1; // с нулевого была стартована отправка СМС
                         } else {
                             ApplicationInfo app = applist.get(iSMSServiceCount);
                             ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
 
                             sms = new Intent(app.packageName);
                             sms.setComponent(component);
-
-                            //List<String> a = numberList.get(0);
-                            //String[] num =  a.toArray(new String[a.size()]);
 
                             sms.putExtra("numberList", numberList.get(0).toArray(new String[numberList.size()]));
                             sms.putExtra("smsText", editMessageTest.getText().toString());
@@ -225,6 +221,7 @@ public class MainActivity extends ActionBarActivity {
 
                 //String strCurrentSMS = "1";
 
+                // определения максимальной длины СМС исходя из языка сообщения
                 if(isCyrillic(editMessageTest.getText().toString())){
                     maxSMSLen = 70;
                 } else {
@@ -255,11 +252,15 @@ public class MainActivity extends ActionBarActivity {
         });
     }
 
-
+    /**
+     * отправка СМС
+     * @param v - элемент на котором кликнули
+     */
     public void onClickSend(View v) {
         // Проверяем сколько плагинов установлено
         //new LoadApplications().execute();
 
+        // если было сделано более 5 попыток проверки плагинов (5 сек) или плагины не получен, прерываем отправку
         int iCountGetApp = 0;
         if(iCountGetApp < 5 && !isGetAppList){
             try {
@@ -377,6 +378,11 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
+    /**
+     * создание списка списка номеров
+     * @param lst - список номеров
+     * @return - список списков номеров для плагинов
+     */
     private List<List<String>> createNumberList(List<String> lst){
         List<List<String>> lstNumber = new ArrayList<>();
 
@@ -492,7 +498,11 @@ public class MainActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // Чтение файла с номерами
+    /** Чтение файла с номерами
+     *
+     * @param filePath - путь к файлу
+     * @return - список номеров
+     */
     static List<String> readFile(String filePath){
 
         List<String> strNumbers = new Vector<String>();
@@ -524,7 +534,11 @@ public class MainActivity extends ActionBarActivity {
         return strNumbers;
     }
 
-    // Определение языка (Кирилица или нет)
+    /** Определение языка (Кирилица или нет)
+     *
+     * @param _str - текст СМС
+     * @return да/нет
+     */
     boolean isCyrillic(String _str){
         for(int i = 0; i < _str.length(); i++){
             //String hexCode = Integer.toHexString(_str.codePointAt(i)).toUpperCase();
@@ -538,6 +552,10 @@ public class MainActivity extends ActionBarActivity {
         return false;
     }
 
+    /**
+     * чтение файла со списком номеров
+     * @param path - путь к файлу
+     */
     static public void setFilePath(String path){
         // Чтение списка номеров из файла
         strNumbers = readFile(path);
@@ -558,6 +576,12 @@ public class MainActivity extends ActionBarActivity {
     }
 
 // ============================================= Получение списка установленных плагинов ==============================
+
+    /**
+     * Получение списка установленных плагинов
+     * @param list - список установленных программ
+     * @return - список плагинов
+     */
     private List<ApplicationInfo> checkForLaunchIntent(List<ApplicationInfo> list) {
         ArrayList<ApplicationInfo> applist = new ArrayList<ApplicationInfo>();
 
@@ -579,6 +603,9 @@ public class MainActivity extends ActionBarActivity {
         return applist;
     }
 
+    /** класс для получения списка установленных программ
+     *
+     */
     private class LoadApplications extends AsyncTask<Void, Void, Void> {
         private ProgressDialog progress = null;
 
@@ -615,11 +642,13 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    // получение количества отправленных смс за время ограничения
+    /** получение количества отправленных смс за время ограничения
+     *
+     * @param pluginName - имя плагина для поиска
+     * @return
+     */
     private int getSentSMSCountPluIn(String pluginName){
         int count = 0;
-
-        //String query = "select COUNT(plugin_sent_table.plugin_name) AS count from plugin_sent_table where plugin_sent_table.plugin_name = 'ru.dsoft38.sms_sender' AND plugin_sent_table.sent_time > 1431852195267 - 900000;";
 
         String query = "SELECT COUNT(" + sqlHelper.PLUGIN_NAME + ") AS count FROM "
                 + sqlHelper.TABLE_NAME + " WHERE "
@@ -642,8 +671,9 @@ public class MainActivity extends ActionBarActivity {
 
     /** получаем минимальное количество плагинов, необходимое для отправки по всему списку номеров.
      * с учетом уже отправленных плагином СМС, но без учета повторной отправки плагином после таймаута.
-     * На вход подается количество номеров в списке.
-    **/
+     * @param numCount - количество номеров в списке
+     * @return - минимальное количество плагинов
+     */
     private int getMinPluginsCount(int numCount){
         int count = 0;
 
