@@ -144,11 +144,19 @@ public class MainActivity extends ActionBarActivity {
                     // Insert plugin name and current timestamp to db
                     java.util.Date date= new java.util.Date();
 
+                    /*
                     String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
                             + " (" + sqlHelper.PLUGIN_NAME + ", " + sqlHelper.SENT_TIME + ") VALUES ('"
                             +  sms.getComponent().getPackageName() + "','" + new Timestamp(date.getTime()) + "')";
+                    */
+
+                    // count miliseconds from 01.01.1970
+                    String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
+                            + " (" + sqlHelper.PLUGIN_NAME + ", " + sqlHelper.SENT_TIME + ") VALUES ('"
+                            +  sms.getComponent().getPackageName() + "','" + date.getTime() + "')";
 
                     sdb.execSQL(insertQuery);
+                    Log.w("LOG_TAG", "DATA INSERT");
 
                 } else if (intent.getAction().equals("SMSSenderServiceStatus")){
 
@@ -280,41 +288,15 @@ public class MainActivity extends ActionBarActivity {
                 return;
             } else {
 
-                //String[] numberList = new String[100];
-
-                //for ( int i = 0; i < 100; i++ ){
-                //    numberList[i] =
-                //}
-
-                //AcceptSendCount();
 //=========================================================================================================================================================================================
                 freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
-                //String[] numberListTemp = strNumbers.toArray(new String[strNumbers.size()]);    // Берем часть массива с номерама
-                //ArrayList<String> numberListTemp = null;
-                //String[] numberList = null;
-
-                //System.arraycopy(numberListTemp, 0, numberList, 0, sourceArray.length);
-
-                //ArrayList<String> numberList = null;
-
 
                 // В зависимости от оставшихся СМС и количества необходимого отправить, устанавливаем размер массива
                 if ( strNumbers.size() <= freeSMSCount ){
-                    /*
-                    numberList = strNumbers.toArray(new String[strNumbers.size()]);
-                    numberList = new String[strNumbers.size()];
-                    System.arraycopy(numberListTemp, 0, numberList, 0, strNumbers.size());
-                    */
-
                     // Максимальное значение прогрессбара
                     maxSMS = strNumbers.size();
                     numberList = createNumberList(strNumbers);
                 } else {
-                    //numberList = strNumbers.toArray(new String[freeSMSCount]);
-                    /*
-                    numberList = new String[freeSMSCount];
-                    System.arraycopy(numberListTemp, 0, numberList, 0, freeSMSCount);
-                    */
                     // Максимальное значение прогрессбара
                     maxSMS = freeSMSCount;
                     numberList = createNumberList(strNumbers.subList(0, freeSMSCount));

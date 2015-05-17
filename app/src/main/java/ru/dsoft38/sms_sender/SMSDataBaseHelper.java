@@ -28,11 +28,13 @@ public class SMSDataBaseHelper extends SQLiteOpenHelper implements BaseColumns {
             + TABLE_NAME;
 
     public SMSDataBaseHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
-        super(context, name, factory, version);
+        super(context, DATABASE_NAME, factory, DATABASE_VERSION);
+
     }
 
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
+        Log.w("LOG_TAG", "DB CREATED");
         sqLiteDatabase.execSQL(SQL_CREATE_ENTRIES);
     }
 
