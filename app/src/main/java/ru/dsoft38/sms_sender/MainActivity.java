@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
+import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -27,9 +28,16 @@ import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -86,6 +94,9 @@ public class MainActivity extends ActionBarActivity {
     private SMSDataBaseHelper sqlHelper;
     private SQLiteDatabase sdb;
     private Date currentDate;
+
+    // MD5 hash summ
+    private static String FILE_MD5_SUMM = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -153,11 +164,17 @@ public class MainActivity extends ActionBarActivity {
                     */
 
                     // count miliseconds from 01.01.1970
-                    String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
-                            + " (" + sqlHelper.PLUGIN_NAME + ", " + sqlHelper.SENT_TIME + ") VALUES ('"
+                    String insertQuery = "INSERT INTO `" + sqlHelper.TABLE_NAME
+                            + "` (`" + sqlHelper.PLUGIN_NAME + "`, `" + sqlHelper.SENT_TIME + "`) VALUES ('"
                             +  sms.getComponent().getPackageName() + "','" + currentDate.getTime() + "')";
 
                     sdb.execSQL(insertQuery);
+
+                    sdb.execSQL("TRUNCATE TABLE `resume_send_table`;");
+
+                    String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
+                    sdb.execSQL(insertQueryResumeSend);
+
                     Log.w("LOG_TAG", "DATA INSERT");
 
                 } else if (intent.getAction().equals("SMSSenderServiceStatus")){
@@ -305,10 +322,11 @@ public class MainActivity extends ActionBarActivity {
                     numberList = createNumberList(strNumbers.subList(0, freeSMSCount));
                 }
 
-                if (getMinPluginsCount(numberList.size()) < applist.size()){
+                int iMinPlugins = getMinPluginsCount(strNumbers.size());
+                if ( iMinPlugins > applist.size() ){
 
                     Toast.makeText(getApplicationContext(),
-                            String.format("Для отправки СМС на все номера не хватает установленных плагинов.\n Установите уще %d плагин(ов).", numberList.size() - applist.size()),
+                            String.format("Для отправки СМС на все номера не хватает установленных плагинов.\n Установите уще %d плагин(ов).", iMinPlugins - applist.size()),
                             Toast.LENGTH_LONG).show();
 
                     return;
@@ -380,10 +398,13 @@ public class MainActivity extends ActionBarActivity {
 
     /**
      * создание списка списка номеров
-     * @param lst - список номеров
+     * @param _lst - список номеров
      * @return - список списков номеров для плагинов
      */
-    private List<List<String>> createNumberList(List<String> lst){
+    private List<List<String>> createNumberList(List<String> _lst){
+
+        List<String> lst = new ArrayList<String>(_lst);
+
         List<List<String>> lstNumber = new ArrayList<>();
 
         // int a = lst.size() % count;
@@ -499,13 +520,12 @@ public class MainActivity extends ActionBarActivity {
     }
 
     /** Чтение файла с номерами
-     *
      * @param filePath - путь к файлу
      * @return - список номеров
      */
     static List<String> readFile(String filePath){
 
-        List<String> strNumbers = new Vector<String>();
+        List<String> strNumbers1 = new Vector<String>();
         //File sdcard = Environment.getExternalStorageDirectory();
 
         //Создаём объект файла
@@ -522,7 +542,7 @@ public class MainActivity extends ActionBarActivity {
             while ((line = br.readLine()) != null) {
                 //text.append(line);
                 //text.append('\n');
-                strNumbers.add(line.trim());
+                strNumbers1.add(line.trim());
             }
         }
         catch (IOException e) {
@@ -531,7 +551,7 @@ public class MainActivity extends ActionBarActivity {
 
         //Log.d("Data", text);
 
-        return strNumbers;
+        return strNumbers1;
     }
 
     /** Определение языка (Кирилица или нет)
@@ -560,8 +580,49 @@ public class MainActivity extends ActionBarActivity {
         // Чтение списка номеров из файла
         strNumbers = readFile(path);
 
+        // Получаем хэш-сумму файла
+        try {
+            getFileMD5HashSumm(path);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         tvPhoneNumberCount.setText("(" + String.valueOf(strNumbers.size()) + ")");
         tvPhoneNumberListFilePatch.setText(path);
+    }
+
+    /**
+     * Процедура получает MD5 хэш-сумма файла
+     * @param filePath - путь к файлу
+     * @return - хэш-сумма
+     * @throws NoSuchAlgorithmException
+     * @throws IOException
+     */
+    private static void getFileMD5HashSumm(String filePath) throws NoSuchAlgorithmException, IOException {
+
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        FileInputStream fis = new FileInputStream(filePath);
+        byte[] dataBytes = new byte[1024];
+
+        int nread = 0;
+
+        while ((nread = fis.read(dataBytes)) != -1) {
+            md.update(dataBytes, 0, nread);
+        };
+
+        byte[] mdbytes = md.digest();
+
+        //convert the byte to hex format
+        StringBuffer sb = new StringBuffer("");
+        for (int i = 0; i < mdbytes.length; i++) {
+            sb.append(Integer.toString((mdbytes[i] & 0xff) + 0x100, 16).substring(1));
+        }
+
+        FILE_MD5_SUMM = sb.toString();
+
+        System.out.println("Digest(in hex format):: " + FILE_MD5_SUMM);
     }
 
     @Override
@@ -643,7 +704,6 @@ public class MainActivity extends ActionBarActivity {
     }
 
     /** получение количества отправленных смс за время ограничения
-     *
      * @param pluginName - имя плагина для поиска
      * @return
      */
@@ -677,8 +737,9 @@ public class MainActivity extends ActionBarActivity {
     private int getMinPluginsCount(int numCount){
         int count = 0;
 
-        while (numCount > 0){
-            if(numCount < applist.size()) {
+        while ( numCount < getSentSMSCountPluIn(applist.get(count).toString())  && numCount > 0 ){
+
+            if( count < applist.size()) {
                 numCount = numCount - getSentSMSCountPluIn(applist.get(count).toString());
             } else {
                 numCount = numCount - iSMSCountPerTime;
@@ -686,6 +747,6 @@ public class MainActivity extends ActionBarActivity {
             count++;
         }
 
-        return  count;
+        return  count + 1;
     }
 }

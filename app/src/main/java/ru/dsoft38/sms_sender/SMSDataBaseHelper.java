@@ -22,7 +22,11 @@ public class SMSDataBaseHelper extends SQLiteOpenHelper implements BaseColumns {
     //        + TABLE_NAME + " (" + UID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
     //        + CATNAME + " VARCHAR(255));";
     private static final String SQL_CREATE_ENTRIES = "CREATE TABLE `"
-            + TABLE_NAME + "` (`" + PLUGIN_NAME + "`	TEXT, `" + SENT_TIME + "`	INTEGER);";
+            + TABLE_NAME + "` (`" + PLUGIN_NAME + "`	TEXT, `" + SENT_TIME + "`	INTEGER);" +
+            " CREATE TABLE `resume_send_table` (" +
+            " `current_sms` INTEGER, " +
+            " `md5hash` TEXT " +
+            ");";
 
     private static final String SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS "
             + TABLE_NAME;
