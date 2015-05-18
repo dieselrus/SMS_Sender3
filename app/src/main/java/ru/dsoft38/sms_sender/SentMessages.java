@@ -48,6 +48,33 @@ public class SentMessages {
         editor.commit();
     }
 
+    // Записываем данные для продолжения отправки
+    public void setPause(String path, String message, boolean isPause){
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putString("filePath", path);
+        editor.putString("messageText", message);
+        editor.putBoolean("isPause", isPause);
+        editor.commit();
+    }
+
+    // получаем состояние пауза или нет
+    public boolean getPause(){
+        sp = PreferenceManager.getDefaultSharedPreferences(context);
+        return sp.getBoolean("isPause", false);
+    }
+
+    // получаем текст СМС
+    public String getMessageText(){
+        sp = PreferenceManager.getDefaultSharedPreferences(context);
+        return sp.getString("messageText", "");
+    }
+
+    // получаем путь к файлу сос писком номеров
+    public String getFilePathSMSNumberList(){
+        sp = PreferenceManager.getDefaultSharedPreferences(context);
+        return sp.getString("filePath", "");
+    }
+
     // Добавляем отправленное количество СМС
     public void addSentSMSCount(int count){
         SharedPreferences.Editor editor = sp.edit();

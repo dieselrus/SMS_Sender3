@@ -22,11 +22,7 @@ public class SMSDataBaseHelper extends SQLiteOpenHelper implements BaseColumns {
     //        + TABLE_NAME + " (" + UID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
     //        + CATNAME + " VARCHAR(255));";
     private static final String SQL_CREATE_ENTRIES = "CREATE TABLE `"
-            + TABLE_NAME + "` (`" + PLUGIN_NAME + "`	TEXT, `" + SENT_TIME + "`	INTEGER);" +
-            " CREATE TABLE `resume_send_table` (" +
-            " `current_sms` INTEGER, " +
-            " `md5hash` TEXT " +
-            ");";
+            + TABLE_NAME + "` (`" + PLUGIN_NAME + "`	TEXT, `" + SENT_TIME + "`	INTEGER);";
 
     private static final String SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS "
             + TABLE_NAME;
@@ -40,6 +36,10 @@ public class SMSDataBaseHelper extends SQLiteOpenHelper implements BaseColumns {
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
         Log.w("LOG_TAG", "DB CREATED");
         sqLiteDatabase.execSQL(SQL_CREATE_ENTRIES);
+        sqLiteDatabase.execSQL(" CREATE TABLE `resume_send_table` (" +
+                " `current_sms` INTEGER, " +
+                " `md5hash` TEXT " +
+                ");");
     }
 
     @Override
@@ -48,6 +48,7 @@ public class SMSDataBaseHelper extends SQLiteOpenHelper implements BaseColumns {
                 + " до версии " + newVersion + ", которое удалит все старые данные");
         // Удаляем предыдущую таблицу при апгрейде
         sqLiteDatabase.execSQL(SQL_DELETE_ENTRIES);
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS resume_send_table");
         // Создаём новый экземпляр таблицы
         onCreate(sqLiteDatabase);
     }

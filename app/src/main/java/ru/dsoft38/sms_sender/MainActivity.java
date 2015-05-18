@@ -11,9 +11,9 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
-import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.telephony.SmsMessage;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -29,13 +29,9 @@ import android.widget.Toast;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 
-import java.io.InputStream;
-import java.math.BigInteger;
-import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -132,7 +128,6 @@ public class MainActivity extends ActionBarActivity {
 
         // Получаем список установленных приложений
         packageManager = getPackageManager();
-
         new LoadApplications().execute();
 
         //Регистрация приемника
@@ -145,9 +140,21 @@ public class MainActivity extends ActionBarActivity {
          */
         service = new BroadcastReceiver()
         {
+            //private Context mContext;
+            //private Bundle mBundle;
+
+            //private String smsBodyStr = "", phoneNoStr = "";
+            //private long smsDatTime = System.currentTimeMillis();
+
             @Override
             public void onReceive(Context context, Intent intent)
             {
+                //mContext = context;
+                //mBundle = intent.getExtras();
+                //if (mBundle != null){
+                //    getSMSDetails();
+                //}
+
                 if(intent.getAction().equals("SMSSenderSMSCount"))
                 {
                     int smsCount = Integer.parseInt(intent.getStringExtra("smscount"));
@@ -170,7 +177,7 @@ public class MainActivity extends ActionBarActivity {
 
                     sdb.execSQL(insertQuery);
 
-                    sdb.execSQL("TRUNCATE TABLE `resume_send_table`;");
+                    sdb.execSQL("DELETE FROM `resume_send_table`;");
 
                     String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
                     sdb.execSQL(insertQueryResumeSend);
@@ -197,7 +204,7 @@ public class MainActivity extends ActionBarActivity {
                             btnClean.setBackgroundResource(R.drawable.clean_up);
 
                             iSMSServiceCount = 1; // с нулевого была стартована отправка СМС
-                        } else {
+                        } else if (applist.size() > 1){
                             ApplicationInfo app = applist.get(iSMSServiceCount);
                             ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
 
@@ -217,6 +224,41 @@ public class MainActivity extends ActionBarActivity {
                     }
                 }
             }
+/*
+            private void getSMSDetails(){
+                SmsMessage[] msgs = null;
+                try{
+                    Object[] pdus = (Object[]) mBundle.get("pdus");
+                    if(pdus != null){
+                        msgs = new SmsMessage[pdus.length];
+                        Log.e("Info","pdus length : "+pdus.length);
+                        for(int k=0; k<msgs.length; k++){
+                            msgs[k] = SmsMessage.createFromPdu((byte[])pdus[k]);
+
+                            Log.e("Info","getDisplayMessageBody : "+msgs[k].getDisplayMessageBody());
+                            Log.e("Info","getDisplayOriginatingAddress : "+msgs[k].getDisplayOriginatingAddress());
+                            Log.e("Info","getMessageBody : "+msgs[k].getMessageBody());
+                            Log.e("Info","getOriginatingAddress : "+msgs[k].getOriginatingAddress());
+                            Log.e("Info","getProtocolIdentifier : "+msgs[k].getProtocolIdentifier());
+                            Log.e("Info","getStatus : "+msgs[k].getStatus());
+                            Log.e("Info","getStatusOnIcc : "+msgs[k].getStatusOnIcc());
+                            Log.e("Info","getStatusOnSim : "+msgs[k].getStatusOnSim());
+
+                            smsBodyStr = msgs[k].getMessageBody().trim();
+                            phoneNoStr = msgs[k].getOriginatingAddress().trim();
+                            smsDatTime = msgs[k].getTimestampMillis();
+
+                            Log.e("Info","SMS Content : "+smsBodyStr);
+                            Log.e("Info","SMS Phone No : "+phoneNoStr);
+                            Log.e("Info","SMS Time : "+smsDatTime);
+                        }
+                    }
+                }
+                catch(Exception sfgh){
+                    Log.e("ERROR", "Error in getSMSDetails : "+sfgh.toString());
+                }
+            }//fn getSMSDetails
+            */
         };
         registerReceiver(service, filter);
 
@@ -267,6 +309,45 @@ public class MainActivity extends ActionBarActivity {
             }
 
         });
+
+        // если программа была поставлена на паузу, считываем настройки
+        if( sentMessages.getPause() ){
+            tvPhoneNumberListFilePatch.setText(sentMessages.getFilePathSMSNumberList());
+            editMessageTest.setText(sentMessages.getMessageText());
+
+            // Чтение списка номеров из файла
+            strNumbers = readFile(sentMessages.getFilePathSMSNumberList());
+
+            // удаляем по индекусу уже отправленные номера
+            Cursor cursor2 = sdb.rawQuery("SELECT `current_sms` FROM `resume_send_table`;", null);
+
+            int index = 0;
+
+            while (cursor2.moveToNext()) {
+                index = cursor2.getInt(cursor2.getColumnIndex("current_sms"));
+            }
+            cursor2.close();
+
+            for(int i = index; i > 0; i--){
+                if(strNumbers.size() > 0)
+                    strNumbers.remove(i - 1);
+            }
+
+            // изменяем состояние кнопок
+            btnStart.setEnabled(true);
+            btnPause.setEnabled(false);
+            btnStop.setEnabled(true);
+            btnBrowse.setEnabled(false);
+            btnClean.setEnabled(true);
+            editMessageTest.setEnabled(true);
+
+            btnStart.setBackgroundResource(R.drawable.play_up);
+            btnStop.setBackgroundResource(R.drawable.stop_up);
+            btnPause.setBackgroundResource(R.drawable.pausa_down);
+            btnBrowse.setBackgroundResource(R.drawable.browse_down);
+            btnClean.setBackgroundResource(R.drawable.clean_up);
+        }
+
     }
 
     /**
@@ -310,6 +391,24 @@ public class MainActivity extends ActionBarActivity {
 
 //=========================================================================================================================================================================================
                 freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
+
+                // если программа была поставлена на паузу, считываем настройки
+                if( sentMessages.getPause() ) {
+                    // удаляем по индекусу уже отправленные номера
+                    Cursor cursor2 = sdb.rawQuery("SELECT `current_sms` FROM `resume_send_table`;", null);
+
+                    int index = 0;
+
+                    while (cursor2.moveToNext()) {
+                        index = cursor2.getInt(cursor2.getColumnIndex("current_sms"));
+                    }
+                    cursor2.close();
+
+                    for (int i = index; i > 0; i--) {
+                        if (strNumbers.size() > 0)
+                            strNumbers.remove(i - 1);
+                    }
+                }
 
                 // В зависимости от оставшихся СМС и количества необходимого отправить, устанавливаем размер массива
                 if ( strNumbers.size() <= freeSMSCount ){
@@ -451,7 +550,14 @@ public class MainActivity extends ActionBarActivity {
         if (btnStop.isEnabled()) {
             // Останавливаем отправку
             // stopService(new Intent(this, SendSMSService.class));
-            stopService(sms);
+            if(null != sms)
+                stopService(sms);
+
+            // записываем в базу текущий индекс номера в списке и хэш-сумму файла с номерами
+            sdb.execSQL("DELETE FROM `resume_send_table`;");
+
+            // записываем в настройки, что остановили отправку и продолжать не нужно
+            sentMessages.setPause("0", "", false);
 
             btnStart.setEnabled(true);
             btnPause.setEnabled(false);
@@ -464,6 +570,36 @@ public class MainActivity extends ActionBarActivity {
             btnStop.setBackgroundResource(R.drawable.stop_down);
             btnPause.setBackgroundResource(R.drawable.pausa_down);
             btnBrowse.setBackgroundResource(R.drawable.browse_up);
+            btnClean.setBackgroundResource(R.drawable.clean_up);
+        }
+    }
+
+    // Назначаем обработчик нажатия на кнопку приостановки отправки
+    public void onClickPause(View v) {
+        if (btnPause.isEnabled()) {
+            // Останавливаем отправку
+            // stopService(new Intent(this, SendSMSService.class));
+            if(null != sms)
+                stopService(sms);
+
+            // записываем в базу текущий индекс номера в списке и хэш-сумму файла с номерами
+            String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
+            sdb.execSQL(insertQueryResumeSend);
+
+            // записываем в настройки, что поставили на паузу
+            sentMessages.setPause(tvPhoneNumberListFilePatch.getText().toString(), editMessageTest.getText().toString(), true);
+
+            btnStart.setEnabled(true);
+            btnPause.setEnabled(false);
+            btnStop.setEnabled(true);
+            btnBrowse.setEnabled(false);
+            btnClean.setEnabled(true);
+            editMessageTest.setEnabled(true);
+
+            btnStart.setBackgroundResource(R.drawable.play_up);
+            btnStop.setBackgroundResource(R.drawable.stop_up);
+            btnPause.setBackgroundResource(R.drawable.pausa_down);
+            btnBrowse.setBackgroundResource(R.drawable.browse_down);
             btnClean.setBackgroundResource(R.drawable.clean_up);
         }
     }
@@ -629,13 +765,26 @@ public class MainActivity extends ActionBarActivity {
     protected void onDestroy()
     {
         super.onDestroy();
-        if(service!= null){unregisterReceiver(service);}
+        if(null != service){unregisterReceiver(service);}
         //stopService(new Intent(this,MainService.class));
         // закрываем соединения с базой данных
         sdb.close();
         sqlHelper.close();
     }
 
+    @Override
+    protected void onPause(){
+        super.onPause();
+        String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
+        sdb.execSQL(insertQueryResumeSend);
+
+        sdb.close();
+        sqlHelper.close();
+    }
+
+    protected  void onResune(){
+        super.onResume();
+    }
 // ============================================= Получение списка установленных плагинов ==============================
 
     /**

@@ -131,7 +131,8 @@
         android:id="@+id/imgButtonPause"
         android:layout_alignBottom="@+id/imgButtonStop"
         android:layout_centerHorizontal="true"
-        android:background="@drawable/pausa_down" />
+        android:background="@drawable/pausa_down"
+        android:onClick="onClickPause" />
 
     <ImageButton
         android:layout_width="wrap_content"
