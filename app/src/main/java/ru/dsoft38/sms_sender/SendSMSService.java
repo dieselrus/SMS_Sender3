@@ -59,7 +59,7 @@ public class SendSMSService  extends Service {
 
         // Регистрация на оповещения об отправке и доставке СМС
         registerReceiver(sentReceiver, new IntentFilter(SENT_SMS_FLAG));
-        registerReceiver(deliverReceiver, new IntentFilter(DELIVER_SMS_FLAG));
+        //registerReceiver(deliverReceiver, new IntentFilter(DELIVER_SMS_FLAG));
 
         sendDataToApp("SMSSenderServiceStatus", "servicestatus", "start");
 
@@ -82,7 +82,7 @@ public class SendSMSService  extends Service {
         sendDataToApp("SMSSenderServiceStatus", "servicestatus", "stop");
         // отмена регистрации на оповещение отправки и доставка СМС
         unregisterReceiver(sentReceiver);
-        unregisterReceiver(deliverReceiver);
+        //unregisterReceiver(deliverReceiver);
     }
 
     @Override
@@ -124,7 +124,8 @@ public class SendSMSService  extends Service {
     BroadcastReceiver sentReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent in) {
-            //currentSMSNumberIndex++;
+            // Увеличиваем счетчик для номеров телефонов в списке
+            currentSMSNumberIndex++;
 
             switch (getResultCode()) {
                 case Activity.RESULT_OK:
@@ -133,24 +134,30 @@ public class SendSMSService  extends Service {
                     //toast.show();
                     Log.d(LOG_TAG, "Сообщение отправлено!");
                     //currentSMSNumberIndex++;
-                    //sendSMS();
+                    sendSMS();
                     break;
                 case SmsManager.RESULT_ERROR_RADIO_OFF :
                     Log.d(LOG_TAG, "Телефонный модуль выключен!");
-                    //sendSMS();
+                    sendSMS();
                     break;
                 case SmsManager.RESULT_ERROR_NULL_PDU :
                     Log.d(LOG_TAG, "Возникла проблема, связанная с форматом PDU (protocol description unit)!");
-                    //sendSMS();
+                    sendSMS();
                     break;
                 case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
                     Log.d(LOG_TAG, "При отправке возникли неизвестные проблемы!");
-                    //sendSMS();
+                    sendSMS();
                     break;
                 default:
                     // sent SMS message failed
                     Log.d(LOG_TAG, "Сообщение не отправлено!");
                     break;
+            }
+
+            // Завершаем сервис если отправили максимальное количество СМС )
+            if (currentSMSNumberIndex >= maxSMSIndex) {
+                sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
+                stopSelf();
             }
         }
     };
@@ -161,7 +168,7 @@ public class SendSMSService  extends Service {
             // SMS delivered actions
 
             // Увеличиваем счетчик для номеров телефонов в списке
-            currentSMSNumberIndex++;
+            //currentSMSNumberIndex++;
 
             // В зависимости от ответа о доставке СМС выводим лог. Запускаем отправку следующего СМС (проверить как будет если номер отключен)
             switch (getResultCode()) {
@@ -170,32 +177,32 @@ public class SendSMSService  extends Service {
                     //Toast toast = Toast.makeText(getApplicationContext(), "Сообщение доставлено!", Toast.LENGTH_SHORT);
                     //toast.show();
                     Log.d(LOG_TAG, "Сообщение доставлено!");
-                    sendSMS();
+                    //sendSMS();
                     break;
-                case SmsManager.RESULT_ERROR_RADIO_OFF :
+                case SmsManager.RESULT_ERROR_RADIO_OFF:
                     Log.d(LOG_TAG, "!Телефонный модуль выключен!");
-                    sendSMS();
+                    //sendSMS();
                     break;
                 case SmsManager.RESULT_ERROR_NULL_PDU :
                     Log.d(LOG_TAG, "!Возникла проблема, связанная с форматом PDU (protocol description unit)!");
-                    sendSMS();
+                    //sendSMS();
                     break;
                 case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
                     Log.d(LOG_TAG, "!При отправке возникли неизвестные проблемы!");
-                    sendSMS();
+                    //sendSMS();
                     break;
                 default:
                     // sent SMS message failed
                     Log.d(LOG_TAG, "Сообщение не доставлено!");
-                    sendSMS();
+                    //sendSMS();
                     break;
             }
 
             // Завершаем сервис если отправили максимальное количество СМС )
-            if (currentSMSNumberIndex >= maxSMSIndex) {
-                sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
-                stopSelf();
-            }
+            //if (currentSMSNumberIndex >= maxSMSIndex) {
+            //    sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
+            //    stopSelf();
+            //}
         }
     };
 

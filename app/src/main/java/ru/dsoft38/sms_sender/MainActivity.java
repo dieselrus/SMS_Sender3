@@ -75,7 +75,8 @@ public class MainActivity extends ActionBarActivity {
 
     // Интент для сервисов отправки СМС
     private Intent sms = null;
-    private int iSMSServiceCount = 0;
+    private int iSMSServiceCount = 1; // была стартована отправка СМС
+    private int iMinPlugins = 100;
 
     private BroadcastReceiver service;
 
@@ -186,10 +187,12 @@ public class MainActivity extends ActionBarActivity {
 
                 } else if (intent.getAction().equals("SMSSenderServiceStatus")){
 
-                    if(intent.getStringExtra("servicestatus").equals("stop")) {
+                    if(intent.getStringExtra("servicestatus").equals("start")) {
+
+                    } else if(intent.getStringExtra("endtask").equals("end")) {
 
                         // Если это последний сервис, разблокируем кнопки иначе стартуес следующее задание
-                        if(iSMSServiceCount > applist.size()) {
+                        if(iSMSServiceCount > iMinPlugins) {
                             btnStart.setEnabled(true);
                             btnPause.setEnabled(false);
                             btnStop.setEnabled(false);
@@ -203,8 +206,7 @@ public class MainActivity extends ActionBarActivity {
                             btnBrowse.setBackgroundResource(R.drawable.browse_up);
                             btnClean.setBackgroundResource(R.drawable.clean_up);
 
-                            iSMSServiceCount = 1; // с нулевого была стартована отправка СМС
-                        } else if (applist.size() > 1){
+                        } else if ( applist.size() > 1 ){
                             ApplicationInfo app = applist.get(iSMSServiceCount);
                             ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
 
@@ -421,7 +423,7 @@ public class MainActivity extends ActionBarActivity {
                     numberList = createNumberList(strNumbers.subList(0, freeSMSCount));
                 }
 
-                int iMinPlugins = getMinPluginsCount(strNumbers.size());
+                iMinPlugins = getMinPluginsCount(strNumbers.size());
                 if ( iMinPlugins > applist.size() ){
 
                     Toast.makeText(getApplicationContext(),
