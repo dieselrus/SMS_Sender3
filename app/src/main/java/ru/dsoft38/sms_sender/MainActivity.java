@@ -192,7 +192,7 @@ public class MainActivity extends ActionBarActivity {
                     } else if(intent.getStringExtra("endtask").equals("end")) {
 
                         // Если это последний сервис, разблокируем кнопки иначе стартуес следующее задание
-                        if(iSMSServiceCount > iMinPlugins) {
+                        if(iSMSServiceCount >= iMinPlugins) {
                             btnStart.setEnabled(true);
                             btnPause.setEnabled(false);
                             btnStop.setEnabled(false);
@@ -206,7 +206,7 @@ public class MainActivity extends ActionBarActivity {
                             btnBrowse.setBackgroundResource(R.drawable.browse_up);
                             btnClean.setBackgroundResource(R.drawable.clean_up);
 
-                        } else if ( applist.size() > 1 ){
+                        } else if ( applist.size() > 1 && iSMSServiceCount < iMinPlugins){
                             ApplicationInfo app = applist.get(iSMSServiceCount);
                             ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
 
@@ -888,7 +888,7 @@ public class MainActivity extends ActionBarActivity {
     private int getMinPluginsCount(int numCount){
         int count = 0;
 
-        while ( numCount < getSentSMSCountPluIn(applist.get(count).toString())  && numCount > 0 ){
+        while ( numCount < getSentSMSCountPluIn(applist.get(count).processName.toString())  && numCount > 0 ){
 
             if( count < applist.size()) {
                 numCount = numCount - getSentSMSCountPluIn(applist.get(count).toString());

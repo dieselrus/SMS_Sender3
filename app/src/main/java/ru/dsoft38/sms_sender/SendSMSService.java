@@ -19,19 +19,19 @@ import java.util.List;
 public class SendSMSService  extends Service {
 
     // максимальное количество отправляемых сообщений для этого сервиса
-    final String LOG_TAG = "Send SMS Service";
+    private final String LOG_TAG = "Send SMS Service";
     private int maxSMSIndex = 100;
 
     // Флаги для отправки и доставки SMS
-    String SENT_SMS_FLAG = "SENT_SMS";
-    String DELIVER_SMS_FLAG = "DELIVER_SMS";
+    private String SENT_SMS_FLAG = "SENT_SMS";
+    private String DELIVER_SMS_FLAG = "DELIVER_SMS";
 
-    PendingIntent sentPIn = null;
-    PendingIntent deliverPIn = null;
+    private PendingIntent sentPIn = null;
+    private PendingIntent deliverPIn = null;
 
     // Список телефонных номеров и текст сообщения
-    String[] numList = null;
-    String smsText = null;
+    private String[] numList = null;
+    private String smsText = null;
 
     private int currentSMSNumberIndex = 0;
 
@@ -96,11 +96,17 @@ public class SendSMSService  extends Service {
         //if (currentSMSNumberIndex >= maxSMSIndex - 1)
         //        stopSelf();
 
-        if ( currentSMSNumberIndex >= maxSMSIndex )
+        if ( currentSMSNumberIndex >= maxSMSIndex ) {
+            sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
+            stopSelf();
             return;
+        }
 
-        if ( numList[currentSMSNumberIndex] == null | smsText == null )
+        if ( numList[currentSMSNumberIndex] == null | smsText == null ) {
+            sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
+            stopSelf();
             return;
+        }
 
         SmsManager smsManager = SmsManager.getDefault();
         // отправляем сообщение
@@ -124,6 +130,11 @@ public class SendSMSService  extends Service {
     BroadcastReceiver sentReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent in) {
+            // Завершаем сервис если отправили максимальное количество СМС )
+            if (currentSMSNumberIndex >= maxSMSIndex) {
+                sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
+                stopSelf();
+            }
             // Увеличиваем счетчик для номеров телефонов в списке
             currentSMSNumberIndex++;
 
@@ -151,13 +162,8 @@ public class SendSMSService  extends Service {
                 default:
                     // sent SMS message failed
                     Log.d(LOG_TAG, "Сообщение не отправлено!");
+                    sendSMS();
                     break;
-            }
-
-            // Завершаем сервис если отправили максимальное количество СМС )
-            if (currentSMSNumberIndex >= maxSMSIndex) {
-                sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
-                stopSelf();
             }
         }
     };
@@ -165,7 +171,11 @@ public class SendSMSService  extends Service {
     BroadcastReceiver deliverReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent in) {
-            // SMS delivered actions
+            // Завершаем сервис если отправили максимальное количество СМС )
+            if (currentSMSNumberIndex >= maxSMSIndex) {
+                sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
+                stopSelf();
+            }
 
             // Увеличиваем счетчик для номеров телефонов в списке
             //currentSMSNumberIndex++;
@@ -197,12 +207,6 @@ public class SendSMSService  extends Service {
                     //sendSMS();
                     break;
             }
-
-            // Завершаем сервис если отправили максимальное количество СМС )
-            //if (currentSMSNumberIndex >= maxSMSIndex) {
-            //    sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
-            //    stopSelf();
-            //}
         }
     };
 
