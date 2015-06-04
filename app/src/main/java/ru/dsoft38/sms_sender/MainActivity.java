@@ -171,6 +171,17 @@ public class MainActivity extends ActionBarActivity {
                             +  sms.getComponent().getPackageName() + "','" + new Timestamp(date.getTime()) + "')";
                     */
 
+                    /*
+                    // Если база не подключена или не открыта
+                    if(null == sdb && !sdb.isOpen()) {
+                        // Инициализируем наш класс-обёртку
+                        sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
+
+                        // База нам нужна для записи и чтения
+                        sdb = sqlHelper.getWritableDatabase();
+                    }
+                    */
+
                     // count miliseconds from 01.01.1970
                     String insertQuery = "INSERT INTO `" + sqlHelper.TABLE_NAME
                             + "` (`" + sqlHelper.PLUGIN_NAME + "`, `" + sqlHelper.SENT_TIME + "`) VALUES ('"
@@ -320,6 +331,15 @@ public class MainActivity extends ActionBarActivity {
             // Чтение списка номеров из файла
             strNumbers = readFile(sentMessages.getFilePathSMSNumberList());
 
+            // Если база не подключена или не открыта
+            if(null == sdb && !sdb.isOpen()) {
+                // Инициализируем наш класс-обёртку
+                sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
+
+                // База нам нужна для записи и чтения
+                sdb = sqlHelper.getWritableDatabase();
+            }
+
             // удаляем по индекусу уже отправленные номера
             Cursor cursor2 = sdb.rawQuery("SELECT `current_sms` FROM `resume_send_table`;", null);
 
@@ -393,6 +413,15 @@ public class MainActivity extends ActionBarActivity {
 
 //=========================================================================================================================================================================================
                 freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
+
+                // Если база не подключена или не открыта
+                if(null == sdb && !sdb.isOpen()) {
+                    // Инициализируем наш класс-обёртку
+                    sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
+
+                    // База нам нужна для записи и чтения
+                    sdb = sqlHelper.getWritableDatabase();
+                }
 
                 // если программа была поставлена на паузу, считываем настройки
                 if( sentMessages.getPause() ) {
@@ -556,7 +585,15 @@ public class MainActivity extends ActionBarActivity {
                 stopService(sms);
 
             // записываем в базу текущий индекс номера в списке и хэш-сумму файла с номерами
-            sdb.execSQL("DELETE FROM `resume_send_table`;");
+            if(null != sdb && sdb.isOpen()) {
+                sdb.execSQL("DELETE FROM `resume_send_table`;");
+            } else {
+                // Инициализируем наш класс-обёртку
+                sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
+
+                // База нам нужна для записи и чтения
+                sdb = sqlHelper.getWritableDatabase();
+            }
 
             // записываем в настройки, что остановили отправку и продолжать не нужно
             sentMessages.setPause("0", "", false);
@@ -583,6 +620,15 @@ public class MainActivity extends ActionBarActivity {
             // stopService(new Intent(this, SendSMSService.class));
             if(null != sms)
                 stopService(sms);
+
+            // Если база не подключена или не открыта
+            if(null == sdb && !sdb.isOpen()) {
+                // Инициализируем наш класс-обёртку
+                sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
+
+                // База нам нужна для записи и чтения
+                sdb = sqlHelper.getWritableDatabase();
+            }
 
             // записываем в базу текущий индекс номера в списке и хэш-сумму файла с номерами
             String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
@@ -777,6 +823,16 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onPause(){
         super.onPause();
+
+        // Если база не подключена или не открыта
+        if(null == sdb && !sdb.isOpen()) {
+            // Инициализируем наш класс-обёртку
+            sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
+
+            // База нам нужна для записи и чтения
+            sdb = sqlHelper.getWritableDatabase();
+        }
+
         String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
         sdb.execSQL(insertQueryResumeSend);
 
@@ -860,6 +916,15 @@ public class MainActivity extends ActionBarActivity {
      */
     private int getSentSMSCountPluIn(String pluginName){
         int count = 0;
+
+        // Если база не подключена или не открыта
+        if(null == sdb && !sdb.isOpen()) {
+            // Инициализируем наш класс-обёртку
+            sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
+
+            // База нам нужна для записи и чтения
+            sdb = sqlHelper.getWritableDatabase();
+        }
 
         String query = "SELECT COUNT(" + sqlHelper.PLUGIN_NAME + ") AS count FROM "
                 + sqlHelper.TABLE_NAME + " WHERE "
