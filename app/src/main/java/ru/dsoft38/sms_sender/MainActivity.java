@@ -141,101 +141,94 @@ public class MainActivity extends ActionBarActivity {
          */
         service = new BroadcastReceiver()
         {
-            //private Context mContext;
-            //private Bundle mBundle;
-
-            //private String smsBodyStr = "", phoneNoStr = "";
-            //private long smsDatTime = System.currentTimeMillis();
 
             @Override
             public void onReceive(Context context, Intent intent)
             {
-                //mContext = context;
-                //mBundle = intent.getExtras();
-                //if (mBundle != null){
-                //    getSMSDetails();
-                //}
+                //try {
+                    if(intent.getAction().equals("SMSSenderSMSCount"))
+                    {
+                        int smsCount = Integer.parseInt(intent.getStringExtra("smscount"));
+                        Log.i("SMSSender", String.valueOf(smsCount));
+                        progressBar.setProgress(smsCount);
+                        progressPercent.setText(String.valueOf(smsCount * 100 / maxSMS) + "%");
+                        progressCount.setText(String.valueOf(smsCount) + "/" + String.valueOf(maxSMS));
+                        sentMessages.addSentSMSCount(smsCount);
 
-                if(intent.getAction().equals("SMSSenderSMSCount"))
-                {
-                    int smsCount = Integer.parseInt(intent.getStringExtra("smscount"));
-                    Log.i("SMSSender", String.valueOf(smsCount));
-                    progressBar.setProgress(smsCount);
-                    progressPercent.setText(String.valueOf(smsCount * 100 / maxSMS) + "%");
-                    progressCount.setText(String.valueOf(smsCount) + "/" + String.valueOf(maxSMS));
-                    sentMessages.addSentSMSCount(smsCount);
+                        /*
+                        String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
+                                + " (" + sqlHelper.PLUGIN_NAME + ", " + sqlHelper.SENT_TIME + ") VALUES ('"
+                                +  sms.getComponent().getPackageName() + "','" + new Timestamp(date.getTime()) + "')";
+                        */
 
-                    /*
-                    String insertQuery = "INSERT INTO " + sqlHelper.TABLE_NAME
-                            + " (" + sqlHelper.PLUGIN_NAME + ", " + sqlHelper.SENT_TIME + ") VALUES ('"
-                            +  sms.getComponent().getPackageName() + "','" + new Timestamp(date.getTime()) + "')";
-                    */
+                        /*
+                        // Если база не подключена или не открыта
+                        if(null == sdb && !sdb.isOpen()) {
+                            // Инициализируем наш класс-обёртку
+                            sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
 
-                    /*
-                    // Если база не подключена или не открыта
-                    if(null == sdb && !sdb.isOpen()) {
-                        // Инициализируем наш класс-обёртку
-                        sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
-
-                        // База нам нужна для записи и чтения
-                        sdb = sqlHelper.getWritableDatabase();
-                    }
-                    */
-
-                    // count miliseconds from 01.01.1970
-                    String insertQuery = "INSERT INTO `" + sqlHelper.TABLE_NAME
-                            + "` (`" + sqlHelper.PLUGIN_NAME + "`, `" + sqlHelper.SENT_TIME + "`) VALUES ('"
-                            +  sms.getComponent().getPackageName() + "','" + currentDate.getTime() + "')";
-
-                    sdb.execSQL(insertQuery);
-
-                    sdb.execSQL("DELETE FROM `resume_send_table`;");
-
-                    String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
-                    sdb.execSQL(insertQueryResumeSend);
-
-                    Log.w("LOG_TAG", "DATA INSERT");
-
-                } else if (intent.getAction().equals("SMSSenderServiceStatus")){
-
-                    if(intent.getStringExtra("servicestatus").equals("start")) {
-
-                    } else if(intent.getStringExtra("endtask").equals("end")) {
-
-                        // Если это последний сервис, разблокируем кнопки иначе стартуес следующее задание
-                        if(iSMSServiceCount >= iMinPlugins) {
-                            btnStart.setEnabled(true);
-                            btnPause.setEnabled(false);
-                            btnStop.setEnabled(false);
-                            btnBrowse.setEnabled(true);
-                            btnClean.setEnabled(true);
-                            editMessageTest.setEnabled(true);
-
-                            btnStart.setBackgroundResource(R.drawable.play_up);
-                            btnStop.setBackgroundResource(R.drawable.stop_down);
-                            btnPause.setBackgroundResource(R.drawable.pausa_down);
-                            btnBrowse.setBackgroundResource(R.drawable.browse_up);
-                            btnClean.setBackgroundResource(R.drawable.clean_up);
-
-                        } else if ( applist.size() > 1 && iSMSServiceCount < iMinPlugins){
-                            ApplicationInfo app = applist.get(iSMSServiceCount);
-                            ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
-
-                            sms = new Intent(app.packageName);
-                            sms.setComponent(component);
-
-                            sms.putExtra("numberList", numberList.get(0).toArray(new String[numberList.size()]));
-                            sms.putExtra("smsText", editMessageTest.getText().toString());
-
-                            // Запуск сервиса отправки СМС
-                            if (null != sms)
-                                startService(sms);
-
-                            iSMSServiceCount++;
+                            // База нам нужна для записи и чтения
+                            sdb = sqlHelper.getWritableDatabase();
                         }
+                        */
 
+                        // count miliseconds from 01.01.1970
+                        String insertQuery = "INSERT INTO `" + sqlHelper.TABLE_NAME
+                                + "` (`" + sqlHelper.PLUGIN_NAME + "`, `" + sqlHelper.SENT_TIME + "`) VALUES ('"
+                                +  sms.getComponent().getPackageName() + "','" + currentDate.getTime() + "')";
+
+                        sdb.execSQL(insertQuery);
+
+                        sdb.execSQL("DELETE FROM `resume_send_table`;");
+
+                        String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
+                        sdb.execSQL(insertQueryResumeSend);
+
+                        Log.w("LOG_TAG", "DATA INSERT");
+
+                    } else if (intent.getAction().equals("SMSSenderServiceStatus")){
+
+                        if(intent.getStringExtra("servicestatus").equals("start")) {
+
+                        } else if(intent.getStringExtra("endtask").equals("end")) {
+
+                            // Если это последний сервис, разблокируем кнопки иначе стартуес следующее задание
+                            if(iSMSServiceCount >= iMinPlugins) {
+                                btnStart.setEnabled(true);
+                                btnPause.setEnabled(false);
+                                btnStop.setEnabled(false);
+                                btnBrowse.setEnabled(true);
+                                btnClean.setEnabled(true);
+                                editMessageTest.setEnabled(true);
+
+                                btnStart.setBackgroundResource(R.drawable.play_up);
+                                btnStop.setBackgroundResource(R.drawable.stop_down);
+                                btnPause.setBackgroundResource(R.drawable.pausa_down);
+                                btnBrowse.setBackgroundResource(R.drawable.browse_up);
+                                btnClean.setBackgroundResource(R.drawable.clean_up);
+
+                            } else if ( applist.size() > 1 && iSMSServiceCount < iMinPlugins){
+                                ApplicationInfo app = applist.get(iSMSServiceCount);
+                                ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
+
+                                sms = new Intent(app.packageName);
+                                sms.setComponent(component);
+
+                                sms.putExtra("numberList", numberList.get(0).toArray(new String[numberList.size()]));
+                                sms.putExtra("smsText", editMessageTest.getText().toString());
+
+                                // Запуск сервиса отправки СМС
+                                if (null != sms)
+                                    startService(sms);
+
+                                iSMSServiceCount++;
+                            }
+                        }
                     }
-                }
+                //} catch (Exception e) {
+                //    e.printStackTrace();
+                //    //Log.e("LOG_TAG", "Error recive data " + e.getMessage().toString());
+                //}
             }
 /*
             private void getSMSDetails(){
@@ -593,6 +586,7 @@ public class MainActivity extends ActionBarActivity {
 
                 // База нам нужна для записи и чтения
                 sdb = sqlHelper.getWritableDatabase();
+                //sdb.setLockingEnabled(false);
             }
 
             // записываем в настройки, что остановили отправку и продолжать не нужно
@@ -953,7 +947,9 @@ public class MainActivity extends ActionBarActivity {
     private int getMinPluginsCount(int numCount){
         int count = 0;
 
-        while ( numCount < getSentSMSCountPluIn(applist.get(count).processName.toString())  && numCount > 0 ){
+        int plug = getSentSMSCountPluIn(applist.get(count).processName.toString());
+
+        while ( numCount < plug  && numCount > 0 ){
 
             if( count < applist.size()) {
                 numCount = numCount - getSentSMSCountPluIn(applist.get(count).toString());
