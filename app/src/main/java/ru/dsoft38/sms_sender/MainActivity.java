@@ -88,8 +88,9 @@ public class MainActivity extends ActionBarActivity {
     boolean isGetAppList = false;
 
     // SQLite
-    private SMSDataBaseHelper sqlHelper;
-    private SQLiteDatabase sdb;
+    //private SMSDataBaseHelper sqlHelper;
+    //private SQLiteDatabase sdb;
+    private DBHistory dbHistory;
     private Date currentDate;
 
     // MD5 hash summ
@@ -101,10 +102,11 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
 
         // Инициализируем наш класс-обёртку
-        sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
+        //sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
 
         // База нам нужна для записи и чтения
-        sdb = sqlHelper.getWritableDatabase();
+        //sdb = sqlHelper.getWritableDatabase();
+        dbHistory.Create(this);
 
         currentDate = new java.util.Date();
 
@@ -173,6 +175,7 @@ public class MainActivity extends ActionBarActivity {
                         */
 
                         // count miliseconds from 01.01.1970
+                        /*
                         String insertQuery = "INSERT INTO `" + sqlHelper.TABLE_NAME
                                 + "` (`" + sqlHelper.PLUGIN_NAME + "`, `" + sqlHelper.SENT_TIME + "`) VALUES ('"
                                 +  sms.getComponent().getPackageName() + "','" + currentDate.getTime() + "')";
@@ -183,6 +186,10 @@ public class MainActivity extends ActionBarActivity {
 
                         String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
                         sdb.execSQL(insertQueryResumeSend);
+                        */
+
+                        // Запись номера отправленного СМС, даты и хеш суммы файла с номерами
+                        dbHistory.setCurrentSMSAndHash(sms.getComponent().getPackageName(), currentDate.getTime(), smsCount, FILE_MD5_SUMM);
 
                         Log.w("LOG_TAG", "DATA INSERT");
 
@@ -224,6 +231,8 @@ public class MainActivity extends ActionBarActivity {
                                 iSMSServiceCount++;
                             }
                         }
+                    } else if (intent.getAction().equals("SMSSenderServiceError")){
+                        showToast(intent.getStringExtra("toast"));
                     }
                 //} catch (Exception e) {
                 //    e.printStackTrace();
@@ -325,6 +334,7 @@ public class MainActivity extends ActionBarActivity {
             strNumbers = readFile(sentMessages.getFilePathSMSNumberList());
 
             // Если база не подключена или не открыта
+            /*
             if(null == sdb && !sdb.isOpen()) {
                 // Инициализируем наш класс-обёртку
                 sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
@@ -333,7 +343,6 @@ public class MainActivity extends ActionBarActivity {
                 sdb = sqlHelper.getWritableDatabase();
             }
 
-            // удаляем по индекусу уже отправленные номера
             Cursor cursor2 = sdb.rawQuery("SELECT `current_sms` FROM `resume_send_table`;", null);
 
             int index = 0;
@@ -342,7 +351,11 @@ public class MainActivity extends ActionBarActivity {
                 index = cursor2.getInt(cursor2.getColumnIndex("current_sms"));
             }
             cursor2.close();
+            */
 
+            int index = dbHistory.getSMSSentCount();
+
+            // удаляем по индекусу уже отправленные номера
             for(int i = index; i > 0; i--){
                 if(strNumbers.size() > 0)
                     strNumbers.remove(i - 1);
@@ -408,6 +421,7 @@ public class MainActivity extends ActionBarActivity {
                 freeSMSCount = sentMessages.getFreeSMSCount();  // Количество свободный СМС дляотправки
 
                 // Если база не подключена или не открыта
+                /*
                 if(null == sdb && !sdb.isOpen()) {
                     // Инициализируем наш класс-обёртку
                     sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
@@ -415,10 +429,12 @@ public class MainActivity extends ActionBarActivity {
                     // База нам нужна для записи и чтения
                     sdb = sqlHelper.getWritableDatabase();
                 }
+                */
 
-                // если программа была поставлена на паузу, считываем настройки
+
                 if( sentMessages.getPause() ) {
                     // удаляем по индекусу уже отправленные номера
+                    /*
                     Cursor cursor2 = sdb.rawQuery("SELECT `current_sms` FROM `resume_send_table`;", null);
 
                     int index = 0;
@@ -427,12 +443,17 @@ public class MainActivity extends ActionBarActivity {
                         index = cursor2.getInt(cursor2.getColumnIndex("current_sms"));
                     }
                     cursor2.close();
+                    */
 
+                    int index = dbHistory.getSMSSentCount();
+
+                    // если программа была поставлена на паузу, считываем настройки
                     for (int i = index; i > 0; i--) {
                         if (strNumbers.size() > 0)
                             strNumbers.remove(i - 1);
                     }
                 }
+
 
                 // В зависимости от оставшихся СМС и количества необходимого отправить, устанавливаем размер массива
                 if ( strNumbers.size() <= freeSMSCount ){
@@ -538,7 +559,7 @@ public class MainActivity extends ActionBarActivity {
 
         // счетчик для списка плагинов и количество свободных СМС для плагина
         int app = 0;
-        int currentSMSCount = iSMSCountPerTime - getSentSMSCountPluIn(applist.get(app).packageName);
+        int currentSMSCount = iSMSCountPerTime - dbHistory.getSentSMSCountPluIn(applist.get(app).packageName, currentDate.getTime(), lTimeSMSLimitForApp);
 
         // счетчик для списка номеров каждому плагину
         int j = 0;
@@ -555,7 +576,7 @@ public class MainActivity extends ActionBarActivity {
                 app++;
                 // если счетчик не превышает количества плагинов
                 if( app < applist.size())
-                    currentSMSCount = iSMSCountPerTime - getSentSMSCountPluIn(applist.get(app).packageName);
+                    currentSMSCount = iSMSCountPerTime - dbHistory.getSentSMSCountPluIn(applist.get(app).packageName, currentDate.getTime(), lTimeSMSLimitForApp);
             }
 
             tmp.add(lst.get(i - 1));
@@ -578,6 +599,7 @@ public class MainActivity extends ActionBarActivity {
                 stopService(sms);
 
             // записываем в базу текущий индекс номера в списке и хэш-сумму файла с номерами
+            /*
             if(null != sdb && sdb.isOpen()) {
                 sdb.execSQL("DELETE FROM `resume_send_table`;");
             } else {
@@ -588,6 +610,10 @@ public class MainActivity extends ActionBarActivity {
                 sdb = sqlHelper.getWritableDatabase();
                 //sdb.setLockingEnabled(false);
             }
+            */
+
+            // Очистим таблицу с номером отправленного СМС и хэшем, ведь мы остановили отправку
+            dbHistory.clearResumeTable();
 
             // записываем в настройки, что остановили отправку и продолжать не нужно
             sentMessages.setPause("0", "", false);
@@ -616,6 +642,7 @@ public class MainActivity extends ActionBarActivity {
                 stopService(sms);
 
             // Если база не подключена или не открыта
+            /*
             if(null == sdb && !sdb.isOpen()) {
                 // Инициализируем наш класс-обёртку
                 sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
@@ -623,10 +650,12 @@ public class MainActivity extends ActionBarActivity {
                 // База нам нужна для записи и чтения
                 sdb = sqlHelper.getWritableDatabase();
             }
+            */
 
             // записываем в базу текущий индекс номера в списке и хэш-сумму файла с номерами
-            String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
-            sdb.execSQL(insertQueryResumeSend);
+            //String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
+            //sdb.execSQL(insertQueryResumeSend);
+            dbHistory.setCurrentNumberAndHash(smsCount, FILE_MD5_SUMM);
 
             // записываем в настройки, что поставили на паузу
             sentMessages.setPause(tvPhoneNumberListFilePatch.getText().toString(), editMessageTest.getText().toString(), true);
@@ -810,8 +839,9 @@ public class MainActivity extends ActionBarActivity {
         if(null != service){unregisterReceiver(service);}
         //stopService(new Intent(this,MainService.class));
         // закрываем соединения с базой данных
-        sdb.close();
-        sqlHelper.close();
+        //sdb.close();
+        //sqlHelper.close();
+        dbHistory.closeConnectDB();
     }
 
     @Override
@@ -819,6 +849,7 @@ public class MainActivity extends ActionBarActivity {
         super.onPause();
 
         // Если база не подключена или не открыта
+        /*
         if(null == sdb && !sdb.isOpen()) {
             // Инициализируем наш класс-обёртку
             sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
@@ -829,9 +860,12 @@ public class MainActivity extends ActionBarActivity {
 
         String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
         sdb.execSQL(insertQueryResumeSend);
+        */
 
-        sdb.close();
-        sqlHelper.close();
+        dbHistory.setCurrentNumberAndHash(smsCount, FILE_MD5_SUMM);
+        //sdb.close();
+        //sqlHelper.close();
+        dbHistory.closeConnectDB();
     }
 
     protected  void onResune(){
@@ -904,41 +938,6 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    /** получение количества отправленных смс за время ограничения
-     * @param pluginName - имя плагина для поиска
-     * @return
-     */
-    private int getSentSMSCountPluIn(String pluginName){
-        int count = 0;
-
-        // Если база не подключена или не открыта
-        if(null == sdb && !sdb.isOpen()) {
-            // Инициализируем наш класс-обёртку
-            sqlHelper = new SMSDataBaseHelper(this, null, null, 1);
-
-            // База нам нужна для записи и чтения
-            sdb = sqlHelper.getWritableDatabase();
-        }
-
-        String query = "SELECT COUNT(" + sqlHelper.PLUGIN_NAME + ") AS count FROM "
-                + sqlHelper.TABLE_NAME + " WHERE "
-                + sqlHelper.PLUGIN_NAME + " = '" + pluginName
-                + "' AND " + sqlHelper.SENT_TIME + " > "
-                + currentDate.getTime() + "-" + lTimeSMSLimitForApp
-                + ";";
-
-        Cursor cursor2 = sdb.rawQuery(query, null);
-
-        while (cursor2.moveToNext()) {
-            count = cursor2.getInt(cursor2.getColumnIndex("count"));
-        }
-        cursor2.close();
-
-        Log.i("LOG_TAG", "Plug-in " + pluginName + " sent " + count + " SMS per 15 minuts.");
-
-        return count;
-    }
-
     /** получаем минимальное количество плагинов, необходимое для отправки по всему списку номеров.
      * с учетом уже отправленных плагином СМС, но без учета повторной отправки плагином после таймаута.
      * @param numCount - количество номеров в списке
@@ -947,12 +946,12 @@ public class MainActivity extends ActionBarActivity {
     private int getMinPluginsCount(int numCount){
         int count = 0;
 
-        int plug = getSentSMSCountPluIn(applist.get(count).processName.toString());
+        int plug = dbHistory.getSentSMSCountPluIn(applist.get(count).processName.toString(), currentDate.getTime(), lTimeSMSLimitForApp);
 
         while ( numCount < plug  && numCount > 0 ){
 
             if( count < applist.size()) {
-                numCount = numCount - getSentSMSCountPluIn(applist.get(count).toString());
+                numCount = numCount - plug;
             } else {
                 numCount = numCount - iSMSCountPerTime;
             }
@@ -960,5 +959,10 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return  count + 1;
+    }
+
+    // Вывод сообщения об ошибке
+    private void showToast(String text){
+        Toast.makeText(getApplicationContext(),text, Toast.LENGTH_SHORT).show();
     }
 }

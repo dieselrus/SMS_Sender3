@@ -32,8 +32,11 @@ public class SendSMSService  extends Service {
     // Список телефонных номеров и текст сообщения
     private String[] numList = null;
     private String smsText = null;
+    private String currentPhoneNumber;
 
     private int currentSMSNumberIndex = 0;
+
+    private int tryCountSendSMS = 1;
 
     // Для передачи данных обратно приложению
     Intent intentApp;
@@ -91,6 +94,7 @@ public class SendSMSService  extends Service {
         return null;
     }
 
+    // Подготовка и проверки для отправки СМС
     void sendSMS() {
         // Завершаем сервис если отправили максимальное количество СМС (-1 потому что индекс в массиве начинается с 0)
         //if (currentSMSNumberIndex >= maxSMSIndex - 1)
@@ -108,18 +112,19 @@ public class SendSMSService  extends Service {
             return;
         }
 
-        SmsManager smsManager = SmsManager.getDefault();
+        //SmsManager smsManager = SmsManager.getDefault();
         // отправляем сообщение
         Log.d(LOG_TAG, "Отправляется сообщение №" + String.valueOf(currentSMSNumberIndex + 1) + " из " + String.valueOf(maxSMSIndex));
 
         // Удаляем не нужные символы
-        String num = numList[currentSMSNumberIndex].replace("-", "").replace(";", "").replace(" ", "").trim();
+        String currentPhoneNumber = numList[currentSMSNumberIndex].replace("-", "").replace(";", "").replace(" ", "").trim();
 
         // Проверяем длину номера 11 символов или 12, если с +
-        if (num.length() == 11 || (num.substring(0, 1).equals("+") && num.length() == 12)) {
+        if (currentPhoneNumber.length() == 11 || (currentPhoneNumber.substring(0, 1).equals("+") && currentPhoneNumber.length() == 12)) {
             Log.d(LOG_TAG, "Отправляется");
-            smsManager.sendTextMessage(num, null, smsText, sentPIn, deliverPIn);
+            //smsManager.sendTextMessage(num, null, smsText, sentPIn, deliverPIn);
             //smsManager.sendTextMessage("5556", null, smsText, null, null);
+            sendingSMS(currentPhoneNumber, smsText);
         }
 
         // Оповещаем приложение об отправке СМС
@@ -149,20 +154,28 @@ public class SendSMSService  extends Service {
                     break;
                 case SmsManager.RESULT_ERROR_RADIO_OFF :
                     Log.d(LOG_TAG, "Телефонный модуль выключен!");
-                    sendSMS();
+                    //sendSMS();
+                    sendDataToApp("SMSSenderServiceError", "toast", "Телефонный модуль выключен!");
+                    trySendingSMS();
                     break;
                 case SmsManager.RESULT_ERROR_NULL_PDU :
                     Log.d(LOG_TAG, "Возникла проблема, связанная с форматом PDU (protocol description unit)!");
-                    sendSMS();
+                    //sendSMS();
+                    sendDataToApp("SMSSenderServiceError", "toast", "Возникла проблема, связанная с форматом PDU (protocol description unit)!");
+                    trySendingSMS();
                     break;
                 case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
                     Log.d(LOG_TAG, "При отправке возникли неизвестные проблемы!");
-                    sendSMS();
+                    //sendSMS();
+                    sendDataToApp("SMSSenderServiceError", "toast", "При отправке возникли неизвестные проблемы!");
+                    trySendingSMS();
                     break;
                 default:
                     // sent SMS message failed
                     Log.d(LOG_TAG, "Сообщение не отправлено!");
-                    sendSMS();
+                    //sendSMS();
+                    sendDataToApp("SMSSenderServiceError", "toast", "Сообщение не отправлено!");
+                    trySendingSMS();
                     break;
             }
         }
@@ -210,11 +223,42 @@ public class SendSMSService  extends Service {
         }
     };
 
-    // Отправка широковещательного сообщения
+    /**
+     * Отправка широковещательного сообщения
+     * @param action - идентификатор
+     * @param name  - ключ
+     * @param value - значение
+     */
     private void sendDataToApp(String action, String name,String value){
         intentApp.setAction(action);
         intentApp.removeExtra(name);
         intentApp.putExtra(name, value);
         sendBroadcast(intentApp);
+    }
+
+    /**
+     * Непостредственная отправка СМС
+     * @param _num - номер телефона
+     * @param _smsText - текст СМС
+     */
+    private void sendingSMS(String _num, String _smsText){
+        SmsManager smsManager = SmsManager.getDefault();
+        smsManager.sendTextMessage(_num, null, _smsText, sentPIn, deliverPIn);
+    }
+
+    // Попытки отправки СМС
+    private void trySendingSMS(){
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        if (tryCountSendSMS <= 3){
+            sendingSMS(currentPhoneNumber, smsText);
+            tryCountSendSMS++;
+        } else {
+            sendDataToApp("SMSSenderServiceError", "toast", "Отправка приостановлена. Проверьте баланс и наличие сети!");
+        }
     }
 }
