@@ -11,16 +11,16 @@ public class DBHistory {
     private SMSDataBaseHelper sqlHelper;
     private SQLiteDatabase sdb;
 
-    // Создание базы данных
+    // РЎРѕР·РґР°РЅРёРµ Р±Р°Р·С‹ РґР°РЅРЅС‹С…
     public void Create(Context context){
-        // Инициализируем наш класс-обёртку
+        // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РЅР°С€ РєР»Р°СЃСЃ-РѕР±С‘СЂС‚РєСѓ
         sqlHelper = new SMSDataBaseHelper(context, null, null, 1);
 
-        // База нам нужна для записи и чтения
+        // Р‘Р°Р·Р° РЅР°Рј РЅСѓР¶РЅР° РґР»СЏ Р·Р°РїРёСЃРё Рё С‡С‚РµРЅРёСЏ
         sdb = sqlHelper.getWritableDatabase();
     }
 
-    // Какой плагин и сколько отправил СМС
+    // РљР°РєРѕР№ РїР»Р°РіРёРЅ Рё СЃРєРѕР»СЊРєРѕ РѕС‚РїСЂР°РІРёР» РЎРњРЎ
     public void setCurrentSMSAndHash(String pluginName, long currentTime, int smsCount, String FILE_MD5_SUMM){
         // count miliseconds from 01.01.1970
         String insertQuery = "INSERT INTO `" + sqlHelper.TABLE_NAME
@@ -35,7 +35,7 @@ public class DBHistory {
         sdb.execSQL(insertQueryResumeSend);
     }
 
-    // Номер последнего отправленного СМС (после паузы)
+    // РќРѕРјРµСЂ РїРѕСЃР»РµРґРЅРµРіРѕ РѕС‚РїСЂР°РІР»РµРЅРЅРѕРіРѕ РЎРњРЎ (РїРѕСЃР»Рµ РїР°СѓР·С‹)
     public int getSMSSentCount(){
         Cursor cursor2 = sdb.rawQuery("SELECT `current_sms` FROM `resume_send_table`;", null);
 
@@ -49,12 +49,12 @@ public class DBHistory {
         return  index;
     }
 
-    // Очистим таблицу истории для продолжения.
+    // РћС‡РёСЃС‚РёРј С‚Р°Р±Р»РёС†Сѓ РёСЃС‚РѕСЂРёРё РґР»СЏ РїСЂРѕРґРѕР»Р¶РµРЅРёСЏ.
     public void clearResumeTable(){
         sdb.execSQL("DELETE FROM `resume_send_table`;");
     }
 
-    // Запишем текущий номер в списке номеров и хэш файла с номерами, для продолжения отправки
+    // Р—Р°РїРёС€РµРј С‚РµРєСѓС‰РёР№ РЅРѕРјРµСЂ РІ СЃРїРёСЃРєРµ РЅРѕРјРµСЂРѕРІ Рё С…СЌС€ С„Р°Р№Р»Р° СЃ РЅРѕРјРµСЂР°РјРё, РґР»СЏ РїСЂРѕРґРѕР»Р¶РµРЅРёСЏ РѕС‚РїСЂР°РІРєРё
     public void setCurrentNumberAndHash(int smsCount, String FILE_MD5_SUMM){
         String insertQueryResumeSend = "INSERT INTO `resume_send_table` (`current_sms`, `md5hash`) VALUES ('" + smsCount + "', '" + FILE_MD5_SUMM + "');";
         sdb.execSQL(insertQueryResumeSend);
@@ -65,8 +65,8 @@ public class DBHistory {
         sqlHelper.close();
     }
 
-    /** получение количества отправленных смс за время ограничения
-     * @param pluginName - имя плагина для поиска
+    /** РїРѕР»СѓС‡РµРЅРёРµ РєРѕР»РёС‡РµСЃС‚РІР° РѕС‚РїСЂР°РІР»РµРЅРЅС‹С… СЃРјСЃ Р·Р° РІСЂРµРјСЏ РѕРіСЂР°РЅРёС‡РµРЅРёСЏ
+     * @param pluginName - РёРјСЏ РїР»Р°РіРёРЅР° РґР»СЏ РїРѕРёСЃРєР°
      * @return
      */
     public int getSentSMSCountPluIn(String pluginName, long currentTime, long lTimeSMSLimitForApp){
