@@ -66,6 +66,7 @@ public class MainActivity extends ActionBarActivity {
 
     // Текущее количество СМС
     private int smsCount = 1;
+    private int smsCountSent = 0;
     private int freeSMSCount = 0;
     private int maxSMS = 0;
     final static private int iSMSCountPerTime = 30;
@@ -95,6 +96,11 @@ public class MainActivity extends ActionBarActivity {
 
     // MD5 hash summ
     private static String FILE_MD5_SUMM = "";
+
+    private static final String ACTION_SEND = "ru.dsoft38.sms_sender.action.SEND";
+    private static final String EXTRA_PHONE_NUMBER = "12345678910";
+    private static final String EXTRA_MSG_TEXT = "EXTRA_MSG_TEXT";
+    private static final String EXTRA_SMS_COUNT = "0";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -216,17 +222,31 @@ public class MainActivity extends ActionBarActivity {
 
                             } else if ( applist.size() > 1 && iSMSServiceCount < iMinPlugins){
                                 ApplicationInfo app = applist.get(iSMSServiceCount);
-                                ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
+                                ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSIntentService");///////
 
                                 sms = new Intent(app.packageName);
                                 sms.setComponent(component);
 
-                                sms.putExtra("numberList", numberList.get(0).toArray(new String[numberList.size()]));
-                                sms.putExtra("smsText", editMessageTest.getText().toString());
+                                //sms.putExtra("numberList", numberList.get(0).toArray(new String[numberList.size()]));
+                                //sms.putExtra("smsText", editMessageTest.getText().toString());
 
                                 // Запуск сервиса отправки СМС
-                                if (null != sms)
-                                    startService(sms);
+                                //if (null != sms)
+                                //    startService(sms);
+
+                                sms.setAction(ACTION_SEND);
+
+                                String[] n = numberList.get(0).toArray(new String[ numberList.get(0).size()]);
+
+                                for (int i = 0; i < n.length; i++) {
+                                    sms.putExtra(EXTRA_PHONE_NUMBER, n[i]);
+                                    sms.putExtra(EXTRA_MSG_TEXT, editMessageTest.getText().toString());
+                                    sms.putExtra(EXTRA_SMS_COUNT, smsCountSent);
+                                    smsCountSent++;
+                                    // Запуск сервиса отправки СМС
+                                    if (null != sms)
+                                        startService(sms);
+                                }
 
                                 iSMSServiceCount++;
                             }
@@ -503,7 +523,7 @@ public class MainActivity extends ActionBarActivity {
                 //sms = new Intent(this, SendSMSService.class);
 
                 ApplicationInfo app = applist.get(0);
-                ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSService");///////
+                ComponentName component = new ComponentName(app.packageName, app.packageName + ".SendSMSIntentService");///////
 
                 sms = new Intent(app.packageName);
                 sms.setComponent(component);
@@ -514,12 +534,26 @@ public class MainActivity extends ActionBarActivity {
                 //num = numberList.get(0);
 
 
-                sms.putExtra("numberList", numberList.get(0).toArray(new String[ numberList.get(0).size()]));
-                sms.putExtra("smsText", editMessageTest.getText().toString());
+                //sms.putExtra("numberList", numberList.get(0).toArray(new String[ numberList.get(0).size()]));
+                //sms.putExtra("smsText", editMessageTest.getText().toString());
 
                 // Запуск сервиса отправки СМС
-                if (null != sms)
-                    startService(sms);
+                //if (null != sms)
+                //    startService(sms);
+
+                sms.setAction(ACTION_SEND);
+
+                String[] n = numberList.get(0).toArray(new String[ numberList.get(0).size()]);
+
+                for (int i = 0; i < n.length; i++) {
+                    sms.putExtra(EXTRA_PHONE_NUMBER, n[i]);
+                    sms.putExtra(EXTRA_MSG_TEXT, editMessageTest.getText().toString());
+                    sms.putExtra(EXTRA_SMS_COUNT, smsCountSent);
+                    smsCountSent++;
+                    // Запуск сервиса отправки СМС
+                    if (null != sms)
+                        this.startService(sms);
+                }
 
 
                 // Делаем кнопку не активной

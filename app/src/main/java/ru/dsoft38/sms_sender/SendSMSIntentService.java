@@ -9,22 +9,12 @@ import android.content.Context;
 import android.telephony.SmsManager;
 import android.util.Log;
 
-/**
- * An {@link IntentService} subclass for handling asynchronous task requests in
- * a service on a separate handler thread.
- * <p/>
- * TODO: Customize class - update intent actions, extra parameters and static
- * helper methods.
- */
 public class SendSMSIntentService extends IntentService {
-    // TODO: Rename actions, choose action names that describe tasks that this
-    // IntentService can perform, e.g. ACTION_FETCH_NEW_ITEMS
-    private static final String ACTION_FOO = "ru.dsoft38.sms_sender.action.FOO";
-    private static final String ACTION_BAZ = "ru.dsoft38.sms_sender.action.BAZ";
 
-    // TODO: Rename parameters
-    private static final String EXTRA_PARAM1 = "ru.dsoft38.sms_sender.extra.PARAM1";
-    private static final String EXTRA_PARAM2 = "ru.dsoft38.sms_sender.extra.PARAM2";
+    private static final String ACTION_SEND = "ru.dsoft38.sms_sender.action.SEND";
+    private static final String EXTRA_PHONE_NUMBER = "12345678910";
+    private static final String EXTRA_MSG_TEXT = "EXTRA_MSG_TEXT";
+    private static final String EXTRA_SMS_COUNT = "0";
 
 
     // Флаги для отправки и доставки SMS
@@ -36,49 +26,19 @@ public class SendSMSIntentService extends IntentService {
 
     // максимальное количество отправляемых сообщений для этого сервиса
     private final String LOG_TAG = "Send SMS Service";
-    private int maxSMSIndex = 100;
+    //private int maxSMSIndex = 100;
 
     // Для передачи данных обратно приложению
     Intent intentApp;
 
-    // Список телефонных номеров и текст сообщения
-    private String[] numList = null;
-    private String smsText = null;
-    private String currentPhoneNumber;
-
-    private int currentSMSNumberIndex = 0;
-
-    private int tryCountSendSMS = 1;
-
-    /**
-     * Starts this service to perform action Foo with the given parameters. If
-     * the service is already performing a task this action will be queued.
-     *
-     * @see IntentService
-     */
-    // TODO: Customize helper method
-    public static void startActionFoo(Context context, String param1, String param2) {
+    /*
         Intent intent = new Intent(context, SendSMSIntentService.class);
-        intent.setAction(ACTION_FOO);
-        intent.putExtra(EXTRA_PARAM1, param1);
-        intent.putExtra(EXTRA_PARAM2, param2);
+        intent.setAction(ACTION_SEND);
+        intent.putExtra(EXTRA_PHONE_NUMBER, param1);
+        intent.putExtra(EXTRA_MSG_TEXT, param2);
+        intent.putExtra(EXTRA_SMS_COUNT, param3);
         context.startService(intent);
-    }
-
-    /**
-     * Starts this service to perform action Baz with the given parameters. If
-     * the service is already performing a task this action will be queued.
-     *
-     * @see IntentService
-     */
-    // TODO: Customize helper method
-    public static void startActionBaz(Context context, String param1, String param2) {
-        Intent intent = new Intent(context, SendSMSIntentService.class);
-        intent.setAction(ACTION_BAZ);
-        intent.putExtra(EXTRA_PARAM1, param1);
-        intent.putExtra(EXTRA_PARAM2, param2);
-        context.startService(intent);
-    }
+    */
 
     public SendSMSIntentService() {
         super("SendSMSIntentService");
@@ -95,78 +55,38 @@ public class SendSMSIntentService extends IntentService {
             deliverPIn = PendingIntent.getBroadcast(this, 0, deliverIn, 0);
 
             final String action = intent.getAction();
-            if (ACTION_FOO.equals(action)) {
-                final String param1 = intent.getStringExtra(EXTRA_PARAM1);
-                final String param2 = intent.getStringExtra(EXTRA_PARAM2);
-                handleActionFoo(param1, param2);
-            } else if (ACTION_BAZ.equals(action)) {
-                final String param1 = intent.getStringExtra(EXTRA_PARAM1);
-                final String param2 = intent.getStringExtra(EXTRA_PARAM2);
-                handleActionBaz(param1, param2);
+            if (ACTION_SEND.equals(action)) {
+                final String param1 = intent.getStringExtra(EXTRA_PHONE_NUMBER);
+                final String param2 = intent.getStringExtra(EXTRA_MSG_TEXT);
+                final String param3 = intent.getStringExtra(EXTRA_SMS_COUNT);
+                sendSMS(param1, param2, param3);
             }
         }
     }
 
-    /**
-     * Handle action Foo in the provided background thread with the provided
-     * parameters.
-     */
-    private void handleActionFoo(String param1, String param2) {
-        // TODO: Handle action Foo
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-
-    /**
-     * Handle action Baz in the provided background thread with the provided
-     * parameters.
-     */
-    private void handleActionBaz(String param1, String param2) {
-        // TODO: Handle action Baz
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-
     // Подготовка и проверки для отправки СМС
-    void sendSMS() {
-        // Завершаем сервис если отправили максимальное количество СМС (-1 потому что индекс в массиве начинается с 0)
-        //if (currentSMSNumberIndex >= maxSMSIndex - 1)
-        //        stopSelf();
-
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        if ( currentSMSNumberIndex >= maxSMSIndex ) {
-            sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
-            stopSelf();
-            return;
-        }
-
-        if ( numList[currentSMSNumberIndex] == null | smsText == null ) {
-            sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
-            stopSelf();
-            return;
-        }
-
+    void sendSMS(String strPhoneNumber, String strMsgText, String currentSMSNumberIndex) {
         //SmsManager smsManager = SmsManager.getDefault();
         // отправляем сообщение
-        Log.d(LOG_TAG, "Отправляется сообщение №" + String.valueOf(currentSMSNumberIndex + 1) + " из " + String.valueOf(maxSMSIndex));
+        Log.d(LOG_TAG, "Отправляется сообщение №" + currentSMSNumberIndex);
 
         // Удаляем не нужные символы
-        String currentPhoneNumber = numList[currentSMSNumberIndex].replace("-", "").replace(";", "").replace(" ", "").trim();
+        strPhoneNumber = strPhoneNumber.replace("-", "").replace(";", "").replace(" ", "").trim();
 
         // Проверяем длину номера 11 символов или 12, если с +
+        /*
         if (currentPhoneNumber.length() == 11 || (currentPhoneNumber.substring(0, 1).equals("+") && currentPhoneNumber.length() == 12)) {
             Log.d(LOG_TAG, "Отправляется");
             //smsManager.sendTextMessage(num, null, smsText, sentPIn, deliverPIn);
             //smsManager.sendTextMessage("5556", null, smsText, null, null);
             sendingSMS(currentPhoneNumber, smsText);
         }
+        */
+
+        sendingSMS(strPhoneNumber, strMsgText);
 
         // Оповещаем приложение об отправке СМС
-        sendDataToApp("SMSSenderSMSCount", "smscount", String.valueOf(currentSMSNumberIndex + 1));
-
+        sendDataToApp("SMSSenderSMSCount", "smscount", currentSMSNumberIndex);
     }
 
     /**
@@ -222,19 +142,11 @@ public class SendSMSIntentService extends IntentService {
     BroadcastReceiver sentReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent in) {
-            // Завершаем сервис если отправили максимальное количество СМС )
-            if (currentSMSNumberIndex >= maxSMSIndex) {
-                sendDataToApp("SMSSenderServiceStatus", "endtask", "end");
-                stopSelf();
-            }
-            // Увеличиваем счетчик для номеров телефонов в списке
-            currentSMSNumberIndex++;
-
             switch (getResultCode()) {
                 case Activity.RESULT_OK:
                     Log.d(LOG_TAG, "Сообщение отправлено!");
                     //currentSMSNumberIndex++;
-                    sendSMS();
+                    //sendSMS();
                     break;
                 case SmsManager.RESULT_ERROR_RADIO_OFF :
                     Log.d(LOG_TAG, "Телефонный модуль выключен!");
